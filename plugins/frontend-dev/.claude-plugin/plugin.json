@@ -1,0 +1,58 @@
+{
+  "name": "frontend-dev",
+  "version": "0.1.0",
+  "description": "React component scaffolding, a11y audits, responsive checks, refactoring, and design system compliance",
+  "author": { "name": "Joe Bailey" },
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "scaffold-component",
+      "description": "Scaffold a React component with props, TypeScript/JSX, tests, and Storybook story",
+      "source": "./commands/scaffold-component.md"
+    },
+    {
+      "name": "a11y-audit",
+      "description": "Run a WCAG 2.1 AA compliance audit using axe-core patterns",
+      "source": "./commands/a11y-audit.md"
+    },
+    {
+      "name": "responsive-check",
+      "description": "Audit responsive design — media queries, viewport handling, and touch targets",
+      "source": "./commands/responsive-check.md"
+    },
+    {
+      "name": "refactor",
+      "description": "Refactor a React component — decompose, extract hooks, reduce complexity",
+      "source": "./commands/refactor.md"
+    },
+    {
+      "name": "design-system",
+      "description": "Check design system compliance — tokens vs hardcoded values",
+      "source": "./commands/design-system.md"
+    }
+  ],
+  "agents": [
+    {
+      "name": "frontend-reviewer",
+      "description": "Holistic frontend reviewer combining all 5 command capabilities",
+      "source": "./agents/frontend-reviewer.md"
+    }
+  ],
+  "skills": [
+    {
+      "name": "react-patterns",
+      "description": "React hooks, composition, state management, and performance patterns",
+      "source": "./skills/react-patterns.md"
+    },
+    {
+      "name": "css-architecture",
+      "description": "BEM, CSS Modules, Tailwind, and responsive design patterns",
+      "source": "./skills/css-architecture.md"
+    },
+    {
+      "name": "a11y-standards",
+      "description": "WCAG 2.1 AA, ARIA, keyboard navigation, and screen reader support",
+      "source": "./skills/a11y-standards.md"
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+# suites/a11y.yaml
+# Positive eval cases for /frontend-dev:a11y-audit
+# Tests that the agent correctly identifies accessibility violations.
+
+- description: "Audit BadForm and identify all a11y violations"
+  metadata:
+    suite: a11y
+    case: badform-audit
+  vars:
+    fixture: "{{fixtureRoot}}/broken-a11y"
+    prompt: |
+      Run /frontend-dev:a11y-audit on the following file.
+
+      {% raw %}
+      `src/BadForm.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      /**
+       * BadForm — a form component with numerous accessibility violations.
+       * Used as a fixture for a11y-audit evals.
+       *
+       * Violations present:
+       * 1. Inputs without associated labels (1.3.1, 4.1.2)
+       * 2. Placeholder used as only label (3.3.2)
+       * 3. Error messages not associated with fields (3.3.1)
+       * 4. Custom "button" is a div with onClick but no keyboard handler (2.1.1)
+       * 5. No autocomplete attributes on email/password (1.3.5)
+       * 6. Required fields not marked (3.3.2)
+       * 7. Missing form element (no <form>) (1.3.1)
+       * 8. Color-only error indication (1.4.1)
+       * 9. Heading skip: h1 -> h4 (1.3.1)
+       * 10. No focus management after error
+       */
+      export function BadForm() {
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [name, setName] = useState('');
+        const [error, setError] = useState('');
+
+        const handleSubmit = () => {
+          if (!email || !password) {
+            setError('Please fill in all fields');
+            return;
+          }
+          // submit logic
+        };
+
+        return (
+          <div>
+            <h1>Sign Up</h1>
+            <h4>Create your account</h4>
+
+            {error && <div style={{ color: 'red' }}>{error}</div>}
+
+            <div>
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <input
+                type="text"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <input type="checkbox" />
+              <span>I agree to the terms</span>
+            </div>
+
+            <div
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#1a73e8',
+                color: 'white',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                display: 'inline-block',
+              }}
+              onClick={handleSubmit}
+            >
+              Create Account
+            </div>
+          </div>
+        );
+      }
+
+      export default BadForm;
+      ```
+      {% endraw %}
+
+      Produce a full WCAG 2.1 AA compliance report.
+  assert:
+    # Must identify missing labels (the form has inputs without labels)
+    - type: javascript
+      value: |
+        const rawText = (context.vars.output || context.prompt.raw || '').toLowerCase();
+        const text = rawText + ' ' + (output || '').toLowerCase();
+        const hasLabelFinding = /missing\s+label|no\s+label|without\s+label|label.*missing|input.*label/i.test(text);
+        return hasLabelFinding;
+      metric: detects_missing_labels
+      weight: 3
+
+    # Must identify missing form error associations
+    - type: javascript
+      value: |
+        const text = (output || '').toLowerCase();
+        const hasErrorFinding = /aria-errormessage|aria-describedby|error.*associat|error.*programmatic/i.test(text);
+        return hasErrorFinding;
+      metric: detects_error_association
+      weight: 2
+
+    # Must identify keyboard issues
+    - type: javascript
+      value: |
+        const text = (output || '').toLowerCase();
+        const hasKeyboardFinding = /keyboard|tabindex|onkeydown|key.*handler|click.*without.*key/i.test(text);
+        return hasKeyboardFinding;
+      metric: detects_keyboard_issues
+      weight: 2
+
+    # Report structure: must have severity ratings and WCAG references
+    - type: llm-rubric
+      value: |
+        Evaluate this accessibility audit report. It should:
+        - Have a summary with finding counts by severity (Critical/Major/Minor)
+        - Reference WCAG success criteria (e.g., "1.1.1", "4.1.2")
+        - Include specific file:line references for each finding
+        - Provide concrete code fixes (not just descriptions)
+        - Include an overall pass/fail rating
+
+        The fixture (BadForm.jsx) contains: inputs without labels, a div with
+        onClick but no onKeyDown, error messages not associated with fields,
+        and missing autocomplete attributes. All of these should be flagged.
+      metric: report_quality
+      weight: 3
+
+- description: "Audit base-app and identify structural a11y issues"
+  metadata:
+    suite: a11y
+    case: base-app-audit
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      Run /frontend-dev:a11y-audit on the following file.
+
+      {% raw %}
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+      {% endraw %}
+
+      Produce a full WCAG 2.1 AA compliance report.
+  assert:
+    # Even a simple app should get landmark checks
+    - type: javascript
+      value: |
+        const text = (output || '').toLowerCase();
+        const hasLandmarkCheck = /landmark|<main>|<header>|<nav>|role.*main|semantic/i.test(text);
+        return hasLandmarkCheck;
+      metric: checks_landmarks
+      weight: 2
+
+    # Should produce a structured report even for a simple file
+    - type: llm-rubric
+      value: |
+        Evaluate this accessibility audit report for a simple React App.jsx.
+        Even for a simple component, the report should:
+        - Be structured with sections
+        - Note what passed (not just failures)
+        - Check heading hierarchy, landmarks, and basic semantics
+        - Be proportionate to the component's simplicity (not 500 lines for a simple file)
+      metric: proportionate_report
+      weight: 2

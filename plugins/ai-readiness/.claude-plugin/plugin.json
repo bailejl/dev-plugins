@@ -1,0 +1,73 @@
+{
+  "name": "ai-readiness",
+  "version": "0.1.0",
+  "description": "Assess repo and git history for AI-coding assistant readiness — audits, code review, security, testing, architecture, and API design",
+  "author": { "name": "Joe Bailey" },
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "full-audit",
+      "description": "Comprehensive 10-section AI readiness audit of a codebase",
+      "source": "./commands/full-audit.md"
+    },
+    {
+      "name": "git-health",
+      "description": "Detect 71 git anti-patterns with DORA-based severity scoring",
+      "source": "./commands/git-health.md"
+    },
+    {
+      "name": "code-review",
+      "description": "7-category weighted code review and static analysis",
+      "source": "./commands/code-review.md"
+    },
+    {
+      "name": "architecture",
+      "description": "6-category architecture and design pattern review with SOLID principles",
+      "source": "./commands/architecture.md"
+    },
+    {
+      "name": "security",
+      "description": "6-category security review — OWASP patterns, auto-fail on critical findings",
+      "source": "./commands/security.md"
+    },
+    {
+      "name": "testing",
+      "description": "Test quality assessment — testing patterns, test desiderata, pyramid analysis",
+      "source": "./commands/testing.md"
+    },
+    {
+      "name": "api-review",
+      "description": "7-category API design and contract pattern review",
+      "source": "./commands/api-review.md"
+    }
+  ],
+  "agents": [
+    {
+      "name": "readiness-auditor",
+      "description": "Evidence-first auditor with decision tree for which commands to run",
+      "source": "./agents/readiness-auditor.md"
+    }
+  ],
+  "skills": [
+    {
+      "name": "ai-context-principles",
+      "description": "AI context windows, signal-to-noise ratio, and token budget management",
+      "source": "./skills/ai-context-principles.md"
+    },
+    {
+      "name": "dora-metrics",
+      "description": "DORA metrics knowledge — deployment frequency, lead time, MTTR, change failure rate",
+      "source": "./skills/dora-metrics.md"
+    },
+    {
+      "name": "scoring-methodology",
+      "description": "Unified scoring — weighted categories, severity levels, pass/fail thresholds",
+      "source": "./skills/scoring-methodology.md"
+    },
+    {
+      "name": "remediation-patterns",
+      "description": "Common fixes across all audit categories — actionable coaching patterns",
+      "source": "./skills/remediation-patterns.md"
+    }
+  ]
+}

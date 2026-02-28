@@ -1,0 +1,598 @@
+# suites/api-review-neg.yaml
+# Negative eval cases for /ai-readiness:api-review
+# Tests that the agent passes a repo with good API design.
+
+- description: "API review on clean-repo should pass"
+  metadata:
+    suite: api-review-neg
+    case: clean-repo-negative
+  vars:
+    fixture: "{{fixtureRoot}}/clean-repo"
+    prompt: |
+      Run /ai-readiness:api-review on the following repository files.
+      Review API design: RESTful conventions, status codes, error handling,
+      pagination, and consistency.
+      Produce an API review report with a score.
+
+      `CLAUDE.md`:
+      ```
+      # CLAUDE.md
+
+      ## Project Overview
+
+      This is a Node.js user management service. It uses an in-memory store for simplicity but is designed to be swapped for a real database.
+
+      ## Conventions
+
+      - Use camelCase for variables and functions
+      - Use JSDoc for all exported functions
+      - Tests go in `tests/` directory, named `*.test.js`
+      - Error handling: throw typed errors, catch at boundaries
+      - No external dependencies beyond Node.js built-ins
+
+      ## Testing
+
+      Run tests with `npm test`. Tests use Node.js built-in `assert` module.
+      All new functionality must have corresponding tests including edge cases.
+
+      ## Code Style
+
+      - 2-space indentation
+      - Single quotes for strings
+      - Semicolons required
+      - Max line length: 100 characters
+      ```
+
+      `README.md`:
+      ```
+      # User Service
+
+      A lightweight Node.js user management service with clean architecture and comprehensive testing.
+
+      ## Getting Started
+
+      ```bash
+      npm install
+      npm start
+      ```
+
+      ## Development
+
+      ```bash
+      npm test          # Run tests
+      npm run lint      # Run linter
+      npm run format    # Format code
+      ```
+
+      ## Project Structure
+
+      ```
+      src/
+        index.js            # Application entry point
+        utils.js            # Shared utility functions
+        user-service.js     # User business logic
+      tests/
+        user-service.test.js  # User service tests
+      ```
+
+      ## API
+
+      The user service exposes the following methods:
+
+      - `createUser(name, email)` — Create a new user
+      - `getUserById(id)` — Retrieve a user by ID
+      - `updateUser(id, updates)` — Update user fields
+      - `deleteUser(id)` — Soft-delete a user
+      - `listUsers(options)` — List users with pagination
+
+      ## License
+
+      MIT
+      ```
+
+      `src/index.js`:
+      ```js
+      'use strict';
+
+      const { UserService } = require('./user-service');
+      const { formatTimestamp } = require('./utils');
+
+      /**
+       * Application entry point.
+       * Initializes the user service and runs a demo workflow.
+       */
+      async function main() {
+        const service = new UserService();
+
+        const user = await service.createUser('Alice', 'alice@example.com');
+        console.log(`Created user: ${user.name} (${user.id}) at ${formatTimestamp(user.createdAt)}`);
+
+        const fetched = await service.getUserById(user.id);
+        console.log(`Fetched user: ${fetched.name}`);
+
+        const updated = await service.updateUser(user.id, { name: 'Alice Smith' });
+        console.log(`Updated user: ${updated.name}`);
+
+        const users = await service.listUsers({ limit: 10, offset: 0 });
+        console.log(`Total users: ${users.total}`);
+
+        await service.deleteUser(user.id);
+        console.log('User soft-deleted');
+      }
+
+      main().catch((err) => {
+        console.error('Fatal error:', err.message);
+        process.exit(1);
+      });
+      ```
+
+      `src/utils.js`:
+      ```js
+      'use strict';
+
+      const crypto = require('crypto');
+
+      /**
+       * Generate a random UUID v4.
+       *
+       * @returns {string} A UUID string
+       */
+      function generateId() {
+        return crypto.randomUUID();
+      }
+
+      /**
+       * Format a Date object into a human-readable timestamp.
+       *
+       * @param {Date} date - The date to format
+       * @returns {string} Formatted timestamp (e.g., "2025-01-15 14:30:00")
+       */
+      function formatTimestamp(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+          throw new TypeError('Expected a valid Date object');
+        }
+        return date.toISOString().replace('T', ' ').slice(0, 19);
+      }
+
+      /**
+       * Validate an email address format.
+       *
+       * @param {string} email - The email to validate
+       * @returns {boolean} True if the email format is valid
+       */
+      function isValidEmail(email) {
+        if (typeof email !== 'string') return false;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+
+      /**
+       * Sanitize a string for safe display by escaping HTML entities.
+       *
+       * @param {string} str - The string to sanitize
+       * @returns {string} Sanitized string
+       */
+      function sanitize(str) {
+        if (typeof str !== 'string') return '';
+        return str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#x27;');
+      }
+
+      module.exports = { generateId, formatTimestamp, isValidEmail, sanitize };
+      ```
+
+      `src/user-service.js`:
+      ```js
+      'use strict';
+
+      const { generateId, isValidEmail } = require('./utils');
+
+      /**
+       * Custom error for user-not-found scenarios.
+       */
+      class UserNotFoundError extends Error {
+        constructor(id) {
+          super(`User not found: ${id}`);
+          this.name = 'UserNotFoundError';
+          this.statusCode = 404;
+        }
+      }
+
+      /**
+       * Custom error for validation failures.
+       */
+      class ValidationError extends Error {
+        constructor(message) {
+          super(message);
+          this.name = 'ValidationError';
+          this.statusCode = 400;
+        }
+      }
+
+      /**
+       * In-memory user management service.
+       * Provides CRUD operations with validation and error handling.
+       */
+      class UserService {
+        constructor() {
+          this.users = new Map();
+        }
+
+        /**
+         * Create a new user.
+         *
+         * @param {string} name - User's display name
+         * @param {string} email - User's email address
+         * @returns {Promise<Object>} The created user object
+         * @throws {ValidationError} If name or email is invalid
+         */
+        async createUser(name, email) {
+          if (!name || typeof name !== 'string' || name.trim().length === 0) {
+            throw new ValidationError('Name is required and must be a non-empty string');
+          }
+          if (!isValidEmail(email)) {
+            throw new ValidationError('A valid email address is required');
+          }
+
+          const user = {
+            id: generateId(),
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deleted: false,
+          };
+
+          this.users.set(user.id, user);
+          return { ...user };
+        }
+
+        /**
+         * Retrieve a user by their ID.
+         *
+         * @param {string} id - The user's unique identifier
+         * @returns {Promise<Object>} The user object
+         * @throws {UserNotFoundError} If the user doesn't exist or is deleted
+         */
+        async getUserById(id) {
+          const user = this.users.get(id);
+          if (!user || user.deleted) {
+            throw new UserNotFoundError(id);
+          }
+          return { ...user };
+        }
+
+        /**
+         * Update a user's fields.
+         *
+         * @param {string} id - The user's unique identifier
+         * @param {Object} updates - Fields to update (name, email)
+         * @returns {Promise<Object>} The updated user object
+         * @throws {UserNotFoundError} If the user doesn't exist
+         * @throws {ValidationError} If the updates are invalid
+         */
+        async updateUser(id, updates) {
+          const user = this.users.get(id);
+          if (!user || user.deleted) {
+            throw new UserNotFoundError(id);
+          }
+
+          if (updates.name !== undefined) {
+            if (typeof updates.name !== 'string' || updates.name.trim().length === 0) {
+              throw new ValidationError('Name must be a non-empty string');
+            }
+            user.name = updates.name.trim();
+          }
+
+          if (updates.email !== undefined) {
+            if (!isValidEmail(updates.email)) {
+              throw new ValidationError('Invalid email format');
+            }
+            user.email = updates.email.toLowerCase().trim();
+          }
+
+          user.updatedAt = new Date();
+          return { ...user };
+        }
+
+        /**
+         * Soft-delete a user by marking them as deleted.
+         *
+         * @param {string} id - The user's unique identifier
+         * @returns {Promise<void>}
+         * @throws {UserNotFoundError} If the user doesn't exist
+         */
+        async deleteUser(id) {
+          const user = this.users.get(id);
+          if (!user || user.deleted) {
+            throw new UserNotFoundError(id);
+          }
+          user.deleted = true;
+          user.updatedAt = new Date();
+        }
+
+        /**
+         * List users with pagination support.
+         *
+         * @param {Object} options - Pagination options
+         * @param {number} [options.limit=20] - Maximum number of users to return
+         * @param {number} [options.offset=0] - Number of users to skip
+         * @returns {Promise<{ users: Object[], total: number }>}
+         */
+        async listUsers({ limit = 20, offset = 0 } = {}) {
+          const activeUsers = [...this.users.values()].filter((u) => !u.deleted);
+          const paginated = activeUsers.slice(offset, offset + limit);
+
+          return {
+            users: paginated.map((u) => ({ ...u })),
+            total: activeUsers.length,
+          };
+        }
+      }
+
+      module.exports = { UserService, UserNotFoundError, ValidationError };
+      ```
+
+      `tests/user-service.test.js`:
+      ```js
+      'use strict';
+
+      const assert = require('assert');
+      const { UserService, UserNotFoundError, ValidationError } = require('../src/user-service');
+
+      describe('UserService', () => {
+        let service;
+
+        beforeEach(() => {
+          service = new UserService();
+        });
+
+        describe('createUser', () => {
+          it('should create a user with valid name and email', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            assert.strictEqual(user.name, 'Alice');
+            assert.strictEqual(user.email, 'alice@example.com');
+            assert.ok(user.id);
+            assert.ok(user.createdAt instanceof Date);
+            assert.strictEqual(user.deleted, false);
+          });
+
+          it('should trim whitespace from name and email', async () => {
+            const user = await service.createUser('  Bob  ', '  BOB@Example.COM  ');
+            assert.strictEqual(user.name, 'Bob');
+            assert.strictEqual(user.email, 'bob@example.com');
+          });
+
+          it('should throw ValidationError for empty name', async () => {
+            await assert.rejects(
+              () => service.createUser('', 'test@example.com'),
+              (err) => err instanceof ValidationError
+            );
+          });
+
+          it('should throw ValidationError for null name', async () => {
+            await assert.rejects(
+              () => service.createUser(null, 'test@example.com'),
+              (err) => err instanceof ValidationError
+            );
+          });
+
+          it('should throw ValidationError for invalid email', async () => {
+            await assert.rejects(
+              () => service.createUser('Alice', 'not-an-email'),
+              (err) => err instanceof ValidationError
+            );
+          });
+
+          it('should throw ValidationError for empty email', async () => {
+            await assert.rejects(
+              () => service.createUser('Alice', ''),
+              (err) => err instanceof ValidationError
+            );
+          });
+        });
+
+        describe('getUserById', () => {
+          it('should retrieve an existing user', async () => {
+            const created = await service.createUser('Alice', 'alice@example.com');
+            const fetched = await service.getUserById(created.id);
+            assert.strictEqual(fetched.name, 'Alice');
+            assert.strictEqual(fetched.email, 'alice@example.com');
+          });
+
+          it('should throw UserNotFoundError for nonexistent ID', async () => {
+            await assert.rejects(
+              () => service.getUserById('nonexistent-id'),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+
+          it('should throw UserNotFoundError for deleted user', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            await service.deleteUser(user.id);
+            await assert.rejects(
+              () => service.getUserById(user.id),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+
+          it('should return a copy, not a reference to internal state', async () => {
+            const created = await service.createUser('Alice', 'alice@example.com');
+            const fetched = await service.getUserById(created.id);
+            fetched.name = 'MODIFIED';
+            const refetched = await service.getUserById(created.id);
+            assert.strictEqual(refetched.name, 'Alice');
+          });
+        });
+
+        describe('updateUser', () => {
+          it('should update user name', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            const updated = await service.updateUser(user.id, { name: 'Alice Smith' });
+            assert.strictEqual(updated.name, 'Alice Smith');
+            assert.strictEqual(updated.email, 'alice@example.com');
+          });
+
+          it('should update user email', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            const updated = await service.updateUser(user.id, { email: 'alice.smith@example.com' });
+            assert.strictEqual(updated.email, 'alice.smith@example.com');
+          });
+
+          it('should update the updatedAt timestamp', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            const originalUpdatedAt = user.updatedAt;
+            const updated = await service.updateUser(user.id, { name: 'Alice Smith' });
+            assert.ok(updated.updatedAt >= originalUpdatedAt);
+          });
+
+          it('should throw UserNotFoundError for nonexistent user', async () => {
+            await assert.rejects(
+              () => service.updateUser('nonexistent', { name: 'Test' }),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+
+          it('should throw ValidationError for invalid email update', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            await assert.rejects(
+              () => service.updateUser(user.id, { email: 'bad-email' }),
+              (err) => err instanceof ValidationError
+            );
+          });
+
+          it('should throw ValidationError for empty name update', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            await assert.rejects(
+              () => service.updateUser(user.id, { name: '' }),
+              (err) => err instanceof ValidationError
+            );
+          });
+        });
+
+        describe('deleteUser', () => {
+          it('should soft-delete an existing user', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            await service.deleteUser(user.id);
+            await assert.rejects(
+              () => service.getUserById(user.id),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+
+          it('should throw UserNotFoundError for nonexistent user', async () => {
+            await assert.rejects(
+              () => service.deleteUser('nonexistent'),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+
+          it('should throw UserNotFoundError for already-deleted user', async () => {
+            const user = await service.createUser('Alice', 'alice@example.com');
+            await service.deleteUser(user.id);
+            await assert.rejects(
+              () => service.deleteUser(user.id),
+              (err) => err instanceof UserNotFoundError
+            );
+          });
+        });
+
+        describe('listUsers', () => {
+          it('should return empty list when no users exist', async () => {
+            const result = await service.listUsers();
+            assert.strictEqual(result.users.length, 0);
+            assert.strictEqual(result.total, 0);
+          });
+
+          it('should return all active users', async () => {
+            await service.createUser('Alice', 'alice@example.com');
+            await service.createUser('Bob', 'bob@example.com');
+            const result = await service.listUsers();
+            assert.strictEqual(result.users.length, 2);
+            assert.strictEqual(result.total, 2);
+          });
+
+          it('should exclude deleted users', async () => {
+            const alice = await service.createUser('Alice', 'alice@example.com');
+            await service.createUser('Bob', 'bob@example.com');
+            await service.deleteUser(alice.id);
+            const result = await service.listUsers();
+            assert.strictEqual(result.users.length, 1);
+            assert.strictEqual(result.total, 1);
+            assert.strictEqual(result.users[0].name, 'Bob');
+          });
+
+          it('should respect limit parameter', async () => {
+            await service.createUser('Alice', 'alice@example.com');
+            await service.createUser('Bob', 'bob@example.com');
+            await service.createUser('Charlie', 'charlie@example.com');
+            const result = await service.listUsers({ limit: 2 });
+            assert.strictEqual(result.users.length, 2);
+            assert.strictEqual(result.total, 3);
+          });
+
+          it('should respect offset parameter', async () => {
+            await service.createUser('Alice', 'alice@example.com');
+            await service.createUser('Bob', 'bob@example.com');
+            await service.createUser('Charlie', 'charlie@example.com');
+            const result = await service.listUsers({ offset: 1, limit: 10 });
+            assert.strictEqual(result.users.length, 2);
+          });
+
+          it('should use default pagination when no options given', async () => {
+            const result = await service.listUsers();
+            assert.ok(Array.isArray(result.users));
+            assert.strictEqual(typeof result.total, 'number');
+          });
+        });
+      });
+
+      /**
+       * Simple test runner (no external deps).
+       */
+      const suites = [];
+      function describe(name, fn) {
+        const suite = { name, tests: [] };
+        suites.push(suite);
+        const outer = global._currentSuite;
+        global._currentSuite = suite;
+        fn();
+        global._currentSuite = outer;
+      }
+
+      function it(name, fn) {
+        global._currentSuite.tests.push({ name, fn });
+      }
+
+      function beforeEach(fn) {
+        global._currentSuite.beforeEach = fn;
+      }
+
+      // Re-run to register
+      delete require.cache[__filename];
+      ```
+  assert:
+    # Score should be passing
+    - type: javascript
+      value: |
+        const scoreMatch = output.match(/(?:overall|api|total)\s*(?:score|rating)[:\s]*(\d+)/i);
+        if (!scoreMatch) {
+          const passMatch = output.match(/\b(clean|good|consistent|pass)\b/i);
+          return { pass: !!passMatch, score: passMatch ? 0.8 : 0, reason: passMatch ? 'Report indicates good API design' : 'Could not determine score' };
+        }
+        const score = parseInt(scoreMatch[1], 10);
+        return { pass: score >= 70, score: score / 100, reason: `API score: ${score}/100` };
+      metric: clean_api_score
+      weight: 3
+
+    # LLM rubric: false positive rate
+    - type: llm-rubric
+      value: |
+        This is a clean repository. While it may not have a complex API,
+        the code that exists follows reasonable patterns.
+        The review should NOT flag significant API design issues.
+      metric: false_positive_rate
+      weight: 3

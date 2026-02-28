@@ -1,0 +1,63 @@
+# eval-infra/promptfoo-base.yaml
+# Base promptfoo configuration for all plugin evals.
+# Plugin-specific configs extend this via:
+#   extends: ../../eval-infra/promptfoo-base.yaml
+
+# ---------------------------------------------------------------------------
+# Prompts — uses the per-test "prompt" variable from each suite
+# ---------------------------------------------------------------------------
+prompts:
+  - "{{prompt}}"
+
+# ---------------------------------------------------------------------------
+# Providers
+# ---------------------------------------------------------------------------
+providers:
+  - id: anthropic:messages:claude-sonnet-4-20250514
+    label: claude-sonnet
+    config:
+      temperature: 0
+      max_tokens: 16384
+
+# ---------------------------------------------------------------------------
+# Output settings
+# ---------------------------------------------------------------------------
+outputPath:
+  - .promptfoo/output.json
+  - .promptfoo/output.csv
+
+# ---------------------------------------------------------------------------
+# Default test configuration
+# ---------------------------------------------------------------------------
+defaultTest:
+  options:
+    # Timeout per test case (ms) — agent tasks can be slow
+    timeout: 300000
+    # Transformations applied to every output before assertions
+    transform: output.trim()
+
+  metadata:
+    # Populated by each plugin config
+    plugin: null
+    suite: null
+    evalDate: "{{date}}"
+
+  vars:
+    evalInfraRoot: ../../eval-infra
+    graderLibRoot: ../../eval-infra/grader-lib
+    rubricRoot: ../../eval-infra/rubric-templates
+
+  # Common assertion types available to all plugin evals
+  assert:
+    # Every test should produce non-empty output
+    - type: javascript
+      value: output.length > 0
+      metric: non_empty_output
+      weight: 0
+
+# ---------------------------------------------------------------------------
+# Evaluation settings
+# ---------------------------------------------------------------------------
+evaluateOptions:
+  maxConcurrency: 2
+  showProgressBar: true

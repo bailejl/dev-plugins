@@ -1,0 +1,22 @@
+{
+  "name": "dev-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A Claude Code plugin marketplace for development tooling — with built-in evaluation harnesses for each plugin",
+  "license": "MIT",
+  "scripts": {
+    "eval:frontend": "./eval-infra/scripts/run-plugin-evals.sh frontend-dev",
+    "eval:readiness": "./eval-infra/scripts/run-plugin-evals.sh ai-readiness",
+    "eval:all": "./eval-infra/scripts/run-all-evals.sh",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "axe-core": "^4.10.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "promptfoo": "^0.120.0",
+    "vite": "^6.0.0"
+  }
+}

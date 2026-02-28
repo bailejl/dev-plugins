@@ -1,0 +1,213 @@
+# suites/api-review.yaml
+# Positive eval cases for /ai-readiness:api-review
+# Tests that the agent identifies REST API design violations.
+
+- description: "API review on bad-api-repo should find REST violations"
+  metadata:
+    suite: api-review
+    case: bad-api-repo-positive
+  vars:
+    fixture: "{{fixtureRoot}}/bad-api-repo"
+    prompt: |
+      Run /ai-readiness:api-review on the following repository files.
+      Review API design: RESTful conventions, status codes, error handling,
+      pagination, and consistency.
+      Produce an API review report.
+
+      {% raw %}
+      `src/routes/getUsers.js`:
+      ```js
+      'use strict';
+
+      /**
+       * GET /getUsers — REST violation: verb in URL.
+       * Should be: GET /users
+       *
+       * Also missing pagination.
+       */
+
+      const users = [
+        { id: 1, name: 'Alice', email: 'alice@example.com' },
+        { id: 2, name: 'Bob', email: 'bob@example.com' },
+        { id: 3, name: 'Charlie', email: 'charlie@example.com' },
+      ];
+
+      function handler(req, res) {
+        // No pagination — returns all users regardless of dataset size
+        // Should support ?page=1&limit=20 or ?offset=0&limit=20
+        res.status(200).json({
+          data: users,
+          // No total count, no next/prev links
+        });
+      }
+
+      // Error format differs from other endpoints
+      function errorHandler(err, req, res, next) {
+        res.status(500).json({ msg: err.message }); // 'msg' instead of 'error'
+      }
+
+      module.exports = { handler, errorHandler };
+      ```
+
+      `src/routes/createUser.js`:
+      ```js
+      'use strict';
+
+      /**
+       * POST /createUser — REST violation: verb in URL.
+       * Should be: POST /users
+       *
+       * Returns 200 instead of 201 Created.
+       * Inconsistent error format.
+       */
+
+      function handler(req, res) {
+        const { name, email } = req.body;
+
+        if (!name) {
+          // Inconsistent error format (different from getUsers error format)
+          return res.status(400).json({ success: false, reason: 'Name is required' });
+        }
+
+        if (!email) {
+          // Yet another error format
+          return res.status(400).json({ error: true, field: 'email', message: 'Email is required' });
+        }
+
+        const newUser = {
+          id: Math.floor(Math.random() * 10000),
+          name,
+          email,
+          createdAt: new Date().toISOString(),
+        };
+
+        // Should return 201 Created, not 200 OK
+        // Should include Location header
+        res.status(200).json({
+          success: true,
+          user: newUser,
+        });
+      }
+
+      module.exports = { handler };
+      ```
+
+      `src/routes/updateUser.js`:
+      ```js
+      'use strict';
+
+      /**
+       * PUT /updateUser/:id — REST violations:
+       * - Verb in URL (should be PUT /users/:id or PATCH /users/:id)
+       * - Accepts PUT but does partial update (PUT should replace the entire resource)
+       * - Should use PATCH for partial updates
+       * - Inconsistent status codes
+       */
+
+      const users = new Map([
+        [1, { id: 1, name: 'Alice', email: 'alice@example.com', role: 'admin' }],
+        [2, { id: 2, name: 'Bob', email: 'bob@example.com', role: 'user' }],
+      ]);
+
+      function handler(req, res) {
+        const id = parseInt(req.params.id, 10);
+        const user = users.get(id);
+
+        if (!user) {
+          // Inconsistent: sometimes returns {error: ...}, sometimes {message: ...}
+          return res.status(404).json({ message: 'Not found' });
+        }
+
+        // PUT is used but only partial fields are updated (should be PATCH)
+        // PUT semantics require full resource replacement
+        const updates = req.body;
+        if (updates.name) user.name = updates.name;
+        if (updates.email) user.email = updates.email;
+        if (updates.role) user.role = updates.role;
+
+        // Returns 200 — acceptable, but inconsistent with createUser which also returns 200
+        // (createUser should be 201, this should be 200)
+        res.status(200).json({
+          ok: true, // Yet another success indicator format: 'ok', 'success', etc.
+          data: user,
+        });
+      }
+
+      module.exports = { handler };
+      ```
+
+      `src/routes/deleteUser.js`:
+      ```js
+      'use strict';
+
+      /**
+       * DELETE /deleteUser/:id — REST violations:
+       * - Verb in URL (should be DELETE /users/:id)
+       * - Returns {success: true} body instead of 204 No Content
+       * - Not idempotent — returns 404 on second call
+       */
+
+      const deletedIds = new Set();
+
+      function handler(req, res) {
+        const id = parseInt(req.params.id, 10);
+
+        // Not idempotent: DELETE should succeed even if already deleted
+        if (deletedIds.has(id)) {
+          return res.status(404).json({ error: 'User already deleted' });
+        }
+
+        if (isNaN(id)) {
+          return res.status(400).json({ error_message: 'Invalid ID' }); // Yet another error key
+        }
+
+        deletedIds.add(id);
+
+        // Should return 204 No Content with no body
+        res.status(200).json({
+          success: true,
+          message: `User ${id} deleted`,
+          deletedAt: new Date().toISOString(),
+        });
+      }
+
+      module.exports = { handler };
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: evidence cited
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 3
+
+    # LLM rubric: finding quality
+    - type: llm-rubric
+      value: |
+        Evaluate the API review. The bad-api-repo has:
+        - Verbs in URLs: GET /getUsers instead of GET /users
+        - Wrong status codes: returns 200 for creation instead of 201
+        - Returns {success: true} for delete instead of 204 No Content
+        - Uses PUT for partial updates (should be PATCH)
+        - No pagination on list endpoints
+        - Inconsistent error response format across endpoints
+        - DELETE endpoint is not idempotent
+        The report should identify these REST violations with specifics.
+      metric: finding_quality
+      weight: 3
+
+    # LLM rubric: coaching quality
+    - type: llm-rubric
+      value: |
+        Evaluate the API recommendations.
+        Good recommendations should reference REST conventions,
+        HTTP specification for status codes, and show corrected
+        endpoint designs.
+      metric: coaching_quality
+      weight: 2
+
+    # Transcript: evidence gathering
+    - type: javascript
+      value: file://./graders/transcript/evidence-gathering.js
+      metric: evidence_gathering
+      weight: 2

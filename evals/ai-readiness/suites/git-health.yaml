@@ -1,0 +1,214 @@
+# suites/git-health.yaml
+# Positive eval cases for /ai-readiness:git-health
+# Tests that the agent correctly identifies git anti-patterns.
+
+- description: "Git health check on bad-git-repo should detect anti-patterns"
+  metadata:
+    suite: git-health
+    case: bad-git-repo-positive
+  vars:
+    fixture: "{{fixtureRoot}}/bad-git-repo"
+    prompt: |
+      Run /ai-readiness:git-health on the following repository.
+      Analyze git history, branching strategy, commit quality, and repository hygiene.
+      Produce a git health report.
+
+      This repository requires `bash setup-fixture.sh` to create a git repo with
+      anti-patterns. Below are the README describing the anti-patterns and the
+      setup script showing the exact git commands used:
+
+      {% raw %}
+      `README.md`:
+      ```md
+      # Bad Git Repo Fixture
+
+      This fixture needs to be initialized with `bash setup-fixture.sh` before use.
+      It creates a git repository with intentional anti-patterns:
+
+      - **WIP commits**: "wip", "fix", "asdf", ".", "update", "temp"
+      - **Long-lived branches**: `feature/old-thing` (60+ days stale), `feature/abandoned-refactor`
+      - **Environment branches**: `dev`, `staging`, `production` diverged from main
+      - **Large binary**: 5MB PSD file committed directly (should use LFS or .gitignore)
+
+      These patterns are used by the `ai-readiness:git-health` eval suite.
+      ```
+
+      `setup-fixture.sh`:
+      ```bash
+      #!/bin/bash
+      # setup-fixture.sh
+      # Creates a git repository with various anti-patterns for testing
+      # the ai-readiness:git-health command.
+      #
+      # Usage: cd bad-git-repo && bash setup-fixture.sh
+      #
+      # This script creates:
+      # 1. WIP commits with meaningless messages
+      # 2. Long-lived stale branches (60+ days old)
+      # 3. Environment branches diverged from main
+      # 4. A large binary file committed to the repo
+
+      set -e
+
+      REPO_DIR="$(pwd)"
+
+      echo "=== Setting up bad-git-repo fixture ==="
+
+      # Initialize repo
+      git init
+      git checkout -b main
+
+      # --- Initial "good" commit ---
+      cat > README.md << 'EOF'
+      # Bad Git Repo Fixture
+      This repo intentionally has git anti-patterns.
+      EOF
+
+      cat > src/app.js << 'EOF'
+      function main() {
+        console.log('Hello world');
+      }
+      module.exports = { main };
+      EOF
+
+      mkdir -p src
+      git add -A
+      git commit -m "Initial project setup with README and app entry point"
+
+      # --- WIP commits with bad messages ---
+      echo "// fix" >> src/app.js
+      git add -A
+      git commit -m "wip"
+
+      echo "// another change" >> src/app.js
+      git add -A
+      git commit -m "fix"
+
+      echo "// stuff" >> src/app.js
+      git add -A
+      git commit -m "asdf"
+
+      echo "// more" >> src/app.js
+      git add -A
+      git commit -m "."
+
+      echo "// update" >> src/app.js
+      git add -A
+      git commit -m "update"
+
+      echo "// wip wip" >> src/app.js
+      git add -A
+      git commit -m "WIP - do not merge"
+
+      echo "// temp fix" >> src/app.js
+      git add -A
+      git commit -m "temp"
+
+      # --- Long-lived stale branch ---
+      git checkout -b feature/old-thing
+      echo "// old feature work" > src/old-feature.js
+      git add -A
+      GIT_COMMITTER_DATE="2024-12-01T10:00:00" git commit --date="2024-12-01T10:00:00" -m "Start old feature"
+
+      echo "// more old work" >> src/old-feature.js
+      GIT_COMMITTER_DATE="2024-12-05T10:00:00" git commit -a --date="2024-12-05T10:00:00" -m "More work on old feature"
+
+      # Another stale branch
+      git checkout main
+      git checkout -b feature/abandoned-refactor
+      echo "// refactor attempt" > src/refactor.js
+      git add -A
+      GIT_COMMITTER_DATE="2024-11-15T10:00:00" git commit --date="2024-11-15T10:00:00" -m "Start refactoring"
+
+      # --- Environment branches diverged from main ---
+      git checkout main
+
+      git checkout -b dev
+      echo "// dev-only change" >> src/app.js
+      echo "DEV_MODE=true" > .env.dev
+      git add -A
+      git commit -m "Dev environment config"
+      echo "// another dev change" >> src/app.js
+      git commit -a -m "Dev hotfix"
+
+      git checkout main
+      git checkout -b staging
+      echo "// staging config" >> src/app.js
+      echo "STAGING_MODE=true" > .env.staging
+      git add -A
+      git commit -m "Staging setup"
+
+      git checkout main
+      git checkout -b production
+      echo "// production config" >> src/app.js
+      echo "PROD_MODE=true" > .env.production
+      git add -A
+      git commit -m "Production config"
+      echo "// production hotfix" >> src/app.js
+      git commit -a -m "Hotfix in production branch"
+
+      # --- Large binary file ---
+      git checkout main
+      dd if=/dev/urandom of=assets/logo.psd bs=1024 count=5120 2>/dev/null  # 5MB binary
+      mkdir -p assets
+      mv logo.psd assets/ 2>/dev/null || dd if=/dev/urandom of=assets/logo.psd bs=1024 count=5120 2>/dev/null
+      git add -A
+      git commit -m "Add design assets"
+
+      # Return to main
+      git checkout main
+
+      echo "=== bad-git-repo fixture ready ==="
+      echo "Branches:"
+      git branch -a
+      echo ""
+      echo "Recent commits on main:"
+      git log --oneline -10
+      echo ""
+      echo "Repo size:"
+      du -sh .git
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: git commands referenced are valid
+    - type: javascript
+      value: file://./graders/deterministic/git-commands-valid.js
+      metric: git_commands_valid
+      weight: 2
+
+    # Deterministic: evidence cited in findings
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 2
+
+    # LLM rubric: finding quality — should detect planted issues
+    - type: llm-rubric
+      value: |
+        Evaluate the git health report for finding quality.
+        The bad-git-repo has these known issues:
+        - WIP commits ("wip", "fix", "asdf") with no meaningful messages
+        - Long-lived stale branches (feature/old-thing, 60+ days old)
+        - Environment branches (dev, staging, production) diverged from main
+        - Large binary file committed to the repo
+        The report should identify these with specific git evidence.
+      metric: finding_quality
+      weight: 3
+
+    # LLM rubric: false negative check
+    - type: llm-rubric
+      value: |
+        The repository has 4 planted git anti-patterns:
+        1. WIP/meaningless commit messages
+        2. Long-lived stale branches
+        3. Environment branches diverged from main
+        4. Large binary files in git
+        How many did the report identify?
+      metric: false_negative_rate
+      weight: 3
+
+    # Transcript: agent should have used git commands
+    - type: javascript
+      value: file://./graders/transcript/tool-usage.js
+      metric: tool_usage
+      weight: 2

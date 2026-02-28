@@ -1,0 +1,373 @@
+# suites/scaffolding.yaml
+# Positive eval cases for /frontend-dev:scaffold-component
+# Tests that the agent correctly scaffolds React components with
+# proper structure, types, tests, and accessibility.
+
+- description: "Scaffold a basic Button component in a TypeScript project"
+  metadata:
+    suite: scaffolding
+    case: basic-button-ts
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      The working directory contains a React + Vite project with the following files:
+
+      {% raw %}
+      `package.json`:
+      ```json
+      {
+        "name": "base-app",
+        "private": true,
+        "version": "0.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext .js,.jsx",
+          "test": "vitest run"
+        },
+        "dependencies": {
+          "react": "^18.3.1",
+          "react-dom": "^18.3.1"
+        },
+        "devDependencies": {
+          "@testing-library/jest-dom": "^6.4.2",
+          "@testing-library/react": "^14.2.1",
+          "@testing-library/user-event": "^14.5.2",
+          "@types/react": "^18.3.1",
+          "@types/react-dom": "^18.3.0",
+          "@vitejs/plugin-react": "^4.2.1",
+          "eslint": "^8.57.0",
+          "eslint-plugin-react": "^7.34.0",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "jsdom": "^24.0.0",
+          "vite": "^5.2.8",
+          "vitest": "^1.4.0"
+        }
+      }
+      ```
+
+      `vite.config.js`:
+      ```js
+      import { defineConfig } from 'vite';
+      import react from '@vitejs/plugin-react';
+
+      export default defineConfig({
+        plugins: [react()],
+        test: {
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: [],
+        },
+      });
+      ```
+
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+      {% endraw %}
+
+      Run /frontend-dev:scaffold-component to create a Button component.
+      It should be a functional component with TypeScript.
+      Include a variant prop that accepts "primary" | "secondary" | "danger".
+      Place it in src/components/Button/.
+  assert:
+    # Deterministic: check file structure
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasComponent = /Button\.(tsx|jsx)|Button\/index\.(tsx|jsx)/.test(text);
+        const hasTest = /Button\.test\.(tsx|jsx)|Button\.spec\.(tsx|jsx)/.test(text);
+        const hasStory = /Button\.stories\.(tsx|jsx)|Button\.story\.(tsx|jsx)/.test(text);
+        return hasComponent && hasTest && hasStory;
+      metric: file_structure
+      weight: 3
+
+    # Deterministic: component file has required patterns
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasInterface = /interface\s+ButtonProps|type\s+ButtonProps/.test(text);
+        const hasVariant = /primary.*secondary.*danger|variant.*primary|'primary'\s*\|\s*'secondary'\s*\|\s*'danger'/.test(text);
+        const hasExport = /export\s+(const|function|default)/.test(text);
+        return hasInterface && hasVariant && hasExport;
+      metric: component_api
+      weight: 3
+
+    # Deterministic: test file exists and has assertions
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasTestStructure = /describe|it\(|test\(/.test(text);
+        const hasRenderCalls = /render|screen/.test(text);
+        return hasTestStructure && hasRenderCalls;
+      metric: test_coverage
+      weight: 2
+
+    # LLM rubric: overall React quality
+    - type: llm-rubric
+      value: |
+        Evaluate the scaffolded Button component for React quality.
+        The component should:
+        - Use TypeScript with a proper ButtonProps interface
+        - Have a variant prop with "primary" | "secondary" | "danger"
+        - Use semantic HTML (<button> element)
+        - Include basic accessibility (type="button" or appropriate aria attributes)
+        - Follow React conventions (PascalCase, proper exports)
+      metric: react_quality
+      weight: 2
+
+- description: "Scaffold a Modal component with hooks and focus management"
+  metadata:
+    suite: scaffolding
+    case: modal-with-hooks
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      The working directory contains a React + Vite project with the following files:
+
+      {% raw %}
+      `package.json`:
+      ```json
+      {
+        "name": "base-app",
+        "private": true,
+        "version": "0.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext .js,.jsx",
+          "test": "vitest run"
+        },
+        "dependencies": {
+          "react": "^18.3.1",
+          "react-dom": "^18.3.1"
+        },
+        "devDependencies": {
+          "@testing-library/jest-dom": "^6.4.2",
+          "@testing-library/react": "^14.2.1",
+          "@testing-library/user-event": "^14.5.2",
+          "@types/react": "^18.3.1",
+          "@types/react-dom": "^18.3.0",
+          "@vitejs/plugin-react": "^4.2.1",
+          "eslint": "^8.57.0",
+          "eslint-plugin-react": "^7.34.0",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "jsdom": "^24.0.0",
+          "vite": "^5.2.8",
+          "vitest": "^1.4.0"
+        }
+      }
+      ```
+
+      `vite.config.js`:
+      ```js
+      import { defineConfig } from 'vite';
+      import react from '@vitejs/plugin-react';
+
+      export default defineConfig({
+        plugins: [react()],
+        test: {
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: [],
+        },
+      });
+      ```
+
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+      {% endraw %}
+
+      Run /frontend-dev:scaffold-component to create a Modal component.
+      It should be a functional component with hooks.
+      It needs: isOpen prop, onClose callback, focus trapping, and Escape key handling.
+      Place it in src/components/Modal/.
+  assert:
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasComponent = /Modal\.(tsx|jsx)|Modal\/index\.(tsx|jsx)/.test(text);
+        const hasTest = /Modal\.test\.(tsx|jsx)|Modal\.spec\.(tsx|jsx)/.test(text);
+        return hasComponent && hasTest;
+      metric: file_structure
+      weight: 3
+
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasIsOpen = /isOpen|is_open|open/.test(text);
+        const hasOnClose = /onClose|on_close/.test(text);
+        const hasUseEffect = /useEffect/.test(text);
+        const hasEscape = /Escape|keydown|KeyDown/.test(text);
+        const hasRole = /role\s*=\s*["']dialog["']|<dialog/.test(text);
+        return hasIsOpen && hasOnClose && hasUseEffect && hasEscape && hasRole;
+      metric: modal_requirements
+      weight: 3
+
+    - type: llm-rubric
+      value: |
+        Evaluate the Modal component API design:
+        - Does it accept isOpen and onClose props?
+        - Does it implement focus trapping?
+        - Does it handle Escape key to close?
+        - Does it use role="dialog" and aria-modal="true"?
+        - Does it render children content?
+        - Is the API clean and not over-engineered?
+      metric: component_api_quality
+      weight: 2
+
+- description: "Scaffold a Form component with validation structure"
+  metadata:
+    suite: scaffolding
+    case: form-component
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      The working directory contains a React + Vite project with the following files:
+
+      {% raw %}
+      `package.json`:
+      ```json
+      {
+        "name": "base-app",
+        "private": true,
+        "version": "0.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext .js,.jsx",
+          "test": "vitest run"
+        },
+        "dependencies": {
+          "react": "^18.3.1",
+          "react-dom": "^18.3.1"
+        },
+        "devDependencies": {
+          "@testing-library/jest-dom": "^6.4.2",
+          "@testing-library/react": "^14.2.1",
+          "@testing-library/user-event": "^14.5.2",
+          "@types/react": "^18.3.1",
+          "@types/react-dom": "^18.3.0",
+          "@vitejs/plugin-react": "^4.2.1",
+          "eslint": "^8.57.0",
+          "eslint-plugin-react": "^7.34.0",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "jsdom": "^24.0.0",
+          "vite": "^5.2.8",
+          "vitest": "^1.4.0"
+        }
+      }
+      ```
+
+      `vite.config.js`:
+      ```js
+      import { defineConfig } from 'vite';
+      import react from '@vitejs/plugin-react';
+
+      export default defineConfig({
+        plugins: [react()],
+        test: {
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: [],
+        },
+      });
+      ```
+
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+      {% endraw %}
+
+      Run /frontend-dev:scaffold-component to create a LoginForm component.
+      It should be a form component with email and password fields.
+      Include form state management and a submit handler.
+      Place it in src/components/LoginForm/.
+  assert:
+    - type: javascript
+      value: |
+        const text = output || '';
+        return /LoginForm\.(tsx|jsx)|LoginForm\/index\.(tsx|jsx)/.test(text);
+      metric: file_structure
+      weight: 2
+
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasForm = /<form/.test(text);
+        const hasLabels = /<label/.test(text) || /aria-label/.test(text);
+        const hasSubmit = /onSubmit|handleSubmit|type\s*=\s*["']submit["']/.test(text);
+        const hasEmail = /email/i.test(text);
+        const hasPassword = /password/i.test(text);
+        return hasForm && hasLabels && hasSubmit && hasEmail && hasPassword;
+      metric: form_structure
+      weight: 3
+
+    - type: llm-rubric
+      value: |
+        Evaluate the LoginForm component for accessibility:
+        - Do all inputs have associated labels?
+        - Are required fields marked?
+        - Is the form element used (not just a div)?
+        - Are autocomplete attributes present (email, current-password)?
+        - Is there an accessible submit button?
+      metric: form_a11y
+      weight: 2

@@ -1,0 +1,9 @@
+node_modules/
+.promptfoo/
+.env
+.env.*
+!.env.example
+dist/
+coverage/
+*.tgz
+.DS_Store

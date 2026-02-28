@@ -1,0 +1,108 @@
+# suites/a11y-neg.yaml
+# Negative eval cases for /frontend-dev:a11y-audit
+# Tests that the agent does NOT produce false positives or overcount issues.
+
+- description: "NEG: Should not flag decorative images with alt=''"
+  metadata:
+    suite: a11y-neg
+    case: no-false-positive-decorative-img
+  vars:
+    prompt: |
+      Run /frontend-dev:a11y-audit on this component:
+
+      {% raw %}
+      ```jsx
+      // src/components/Card.jsx
+      export function Card({ title, children }) {
+        return (
+          <article aria-labelledby="card-title">
+            <img src="/decorative-border.svg" alt="" role="presentation" />
+            <h2 id="card-title">{title}</h2>
+            <div>{children}</div>
+          </article>
+        );
+      }
+      ```
+      {% endraw %}
+
+      Produce an accessibility audit report.
+  assert:
+    # Should NOT flag the decorative image as an a11y issue
+    - type: javascript
+      value: |
+        const text = (context.output || '').toLowerCase();
+        const flagsDecorativeImg = /decorative.*missing.*alt|alt="".*issue|role="presentation".*problem/.test(text);
+        return !flagsDecorativeImg;
+      metric: no_false_positive_decorative
+      weight: 3
+
+    # Should recognize that this component is largely accessible
+    - type: llm-rubric
+      value: |
+        The agent was given a well-structured Card component that uses:
+        - <article> with aria-labelledby
+        - Decorative image with alt="" and role="presentation" (correct)
+        - Proper heading with id
+
+        The agent should recognize this is MOSTLY ACCESSIBLE. It should NOT
+        flag the decorative image as an issue. It may note minor suggestions
+        (e.g., "no critical findings") but should not invent problems.
+        Score 1 if the agent flags the decorative image as a violation.
+        Score 5 if the agent correctly identifies the component as largely accessible.
+      metric: accuracy
+      weight: 3
+
+- description: "NEG: Should not flag accessible form as having violations"
+  metadata:
+    suite: a11y-neg
+    case: no-false-positive-accessible-form
+  vars:
+    prompt: |
+      Run /frontend-dev:a11y-audit on this component:
+
+      {% raw %}
+      ```jsx
+      // src/components/SearchBox.jsx
+      export function SearchBox({ onSearch }) {
+        const [query, setQuery] = useState('');
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          onSearch(query);
+        };
+        return (
+          <form role="search" onSubmit={handleSubmit}>
+            <label htmlFor="search-input">Search</label>
+            <input
+              id="search-input"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-describedby="search-hint"
+              autoComplete="off"
+            />
+            <p id="search-hint">Enter keywords to search</p>
+            <button type="submit">Search</button>
+          </form>
+        );
+      }
+      ```
+      {% endraw %}
+  assert:
+    # Should have 0 Critical and 0 Major findings
+    - type: llm-rubric
+      value: |
+        This SearchBox component is well-built for accessibility:
+        - Uses <form> with role="search"
+        - Input has visible <label> with htmlFor
+        - Input has aria-describedby for hint text
+        - Submit button has clear text content
+        - Uses semantic form submission
+
+        The audit should find 0 Critical and 0 Major findings.
+        Minor suggestions (e.g., "consider adding a landmark region around this")
+        are acceptable but should be clearly labeled as minor/optional.
+
+        Score 1 if Critical or Major issues are falsely reported.
+        Score 5 if the report correctly gives a clean bill of health.
+      metric: no_false_positives
+      weight: 4

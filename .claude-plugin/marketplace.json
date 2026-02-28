@@ -1,0 +1,34 @@
+{
+  "name": "dev-plugins",
+  "owner": {
+    "name": "Joe Bailey",
+    "email": "you@example.com"
+  },
+  "metadata": {
+    "description": "Development plugins with eval harnesses — a reference implementation",
+    "version": "0.1.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "frontend-dev",
+      "source": "./plugins/frontend-dev",
+      "description": "React component scaffolding, a11y audits, and code review",
+      "version": "0.1.0",
+      "author": { "name": "Joe Bailey" },
+      "license": "MIT",
+      "keywords": ["react", "frontend", "accessibility", "components"],
+      "category": "code-intelligence"
+    },
+    {
+      "name": "ai-readiness",
+      "source": "./plugins/ai-readiness",
+      "description": "Assess repo and git history for AI-coding assistant readiness",
+      "version": "0.1.0",
+      "author": { "name": "Joe Bailey" },
+      "license": "MIT",
+      "keywords": ["audit", "ai-readiness", "git", "code-quality", "security"],
+      "category": "code-intelligence"
+    }
+  ]
+}

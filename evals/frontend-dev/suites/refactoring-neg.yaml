@@ -1,0 +1,113 @@
+# suites/refactoring-neg.yaml
+# Negative eval cases for /frontend-dev:refactor
+# Tests that the agent does NOT over-refactor clean code.
+
+- description: "NEG: Should not refactor a clean, small component"
+  metadata:
+    suite: refactoring-neg
+    case: no-refactor-clean-component
+  vars:
+    prompt: |
+      Run /frontend-dev:refactor on this component:
+
+      {% raw %}
+      ```jsx
+      // src/components/Avatar.jsx
+      export function Avatar({ src, alt, size = 40 }) {
+        return (
+          <img
+            src={src}
+            alt={alt}
+            width={size}
+            height={size}
+            style={{ borderRadius: '50%', objectFit: 'cover' }}
+          />
+        );
+      }
+      ```
+      {% endraw %}
+  assert:
+    - type: llm-rubric
+      value: |
+        The Avatar component is simple, clean, and well-scoped (~10 lines).
+        There is nothing to refactor. The agent should recognize this and
+        communicate that the component is already well-structured.
+
+        Penalize if the agent:
+        - Extracts unnecessary hooks
+        - Wraps in React.memo without evidence of perf issues
+        - Adds Context, reducers, or abstractions
+        - Creates new files for such a simple component
+        - Suggests splitting it into sub-components
+
+        Score 1 if the agent applies unnecessary refactorings.
+        Score 3 if the agent suggests minor improvements without applying them.
+        Score 5 if the agent recognizes the code is clean and says so.
+      metric: respects_simplicity
+      weight: 4
+
+- description: "NEG: Should preserve behavior when refactoring — no breaking changes"
+  metadata:
+    suite: refactoring-neg
+    case: preserve-behavior
+  vars:
+    prompt: |
+      Run /frontend-dev:refactor on this component:
+
+      {% raw %}
+      ```jsx
+      // src/components/Counter.jsx
+      import { useState, useCallback } from 'react';
+
+      export function Counter({ initialCount = 0, step = 1, onCountChange }) {
+        const [count, setCount] = useState(initialCount);
+
+        const increment = useCallback(() => {
+          setCount(c => c + step);
+          onCountChange?.(count + step);
+        }, [step, count, onCountChange]);
+
+        const decrement = useCallback(() => {
+          setCount(c => c - step);
+          onCountChange?.(count - step);
+        }, [step, count, onCountChange]);
+
+        const reset = useCallback(() => {
+          setCount(initialCount);
+          onCountChange?.(initialCount);
+        }, [initialCount, onCountChange]);
+
+        return (
+          <div>
+            <button onClick={decrement}>-</button>
+            <span>{count}</span>
+            <button onClick={increment}>+</button>
+            <button onClick={reset}>Reset</button>
+          </div>
+        );
+      }
+      ```
+      {% endraw %}
+
+      Analyze and refactor if improvements exist.
+  assert:
+    # The component's public API must remain the same
+    - type: llm-rubric
+      value: |
+        The Counter component has a clear public API: initialCount, step, onCountChange.
+        Any refactoring must preserve this exact API. The agent may:
+        - Fix the stale closure bug (onCountChange uses count, not c + step)
+        - Simplify the useCallback dependencies
+        - Potentially use useReducer
+
+        But the agent MUST NOT:
+        - Change the prop names or remove props
+        - Change the rendered button structure
+        - Add new required props
+        - Change the component name
+
+        Score 1 if the public API is broken.
+        Score 3 if behavior is preserved but the bug isn't noticed.
+        Score 5 if the stale closure bug is identified and fixed while preserving the API.
+      metric: behavior_preservation
+      weight: 4

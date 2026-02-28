@@ -1,0 +1,865 @@
+# suites/architecture.yaml
+# Positive eval cases for /ai-readiness:architecture
+# Tests that the agent identifies architectural anti-patterns.
+
+- description: "Architecture review on spaghetti-arch-repo should find anti-patterns"
+  metadata:
+    suite: architecture
+    case: spaghetti-arch-positive
+  vars:
+    fixture: "{{fixtureRoot}}/spaghetti-arch-repo"
+    prompt: |
+      Run /ai-readiness:architecture on the following repository files.
+      Analyze the codebase architecture: dependency structure, layering,
+      separation of concerns, and design patterns.
+      Produce an architecture review report.
+
+      {% raw %}
+      `src/controller.js`:
+      ```js
+      'use strict';
+
+      /**
+       * controller.js — Architecture anti-pattern: Layer violations.
+       *
+       * This controller:
+       * - Directly queries the database (skipping service/repository layers)
+       * - Contains business logic inline (should be in services)
+       * - Mixes concerns: validation, data access, transformation, response
+       */
+
+      function handleGetUser(req, res) {
+        // Direct database query in controller (should go through service → repository)
+        const userId = req.params.id;
+        const sql = `SELECT * FROM users WHERE id = ${userId}`;
+        const user = fakeDbQuery(sql);
+
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Business logic inline in controller
+        // This should be in a UserService
+        const isActive = user.lastLogin &&
+          (Date.now() - new Date(user.lastLogin).getTime()) < 30 * 24 * 60 * 60 * 1000;
+
+        const membershipLevel = calculateMembershipLevel(user);
+
+        // Data transformation inline
+        // This should be in a presenter/serializer
+        const response = {
+          id: user.id,
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          isActive,
+          membershipLevel,
+          joinedAgo: formatTimeAgo(user.createdAt),
+          orderCount: getOrderCount(userId), // Another direct DB query
+        };
+
+        res.json(response);
+      }
+
+      function handleCreateUser(req, res) {
+        // Validation inline (should be middleware or validation service)
+        const { firstName, lastName, email, password } = req.body;
+
+        if (!firstName || firstName.length < 2) {
+          return res.status(400).json({ error: 'First name too short' });
+        }
+        if (!lastName) {
+          return res.status(400).json({ error: 'Last name required' });
+        }
+        if (!email || !email.includes('@')) {
+          return res.status(400).json({ error: 'Invalid email' });
+        }
+        if (!password || password.length < 8) {
+          return res.status(400).json({ error: 'Password too short' });
+        }
+
+        // Direct DB query to check for duplicates
+        const existing = fakeDbQuery(`SELECT id FROM users WHERE email = '${email}'`);
+        if (existing) {
+          return res.status(409).json({ error: 'Email already exists' });
+        }
+
+        // Password hashing inline (should be in auth service)
+        const hashedPassword = require('crypto').createHash('sha256').update(password).digest('hex');
+
+        // Direct DB insert
+        const newUser = fakeDbQuery(
+          `INSERT INTO users (firstName, lastName, email, password, createdAt) VALUES ('${firstName}', '${lastName}', '${email}', '${hashedPassword}', NOW()) RETURNING *`
+        );
+
+        // Send welcome email inline (should be event-driven or in a service)
+        console.log(`Sending welcome email to ${email}...`);
+
+        res.status(201).json({ id: newUser.id, name: `${firstName} ${lastName}`, email });
+      }
+
+      function handleListOrders(req, res) {
+        const userId = req.params.userId;
+
+        // Complex business logic in controller
+        const orders = fakeDbQuery(`SELECT * FROM orders WHERE user_id = ${userId} ORDER BY created_at DESC`);
+        const enriched = orders.map(order => {
+          const items = fakeDbQuery(`SELECT * FROM order_items WHERE order_id = ${order.id}`);
+          const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          const tax = subtotal * 0.08;
+          const shipping = subtotal > 50 ? 0 : 5.99;
+          const total = subtotal + tax + shipping;
+
+          return {
+            ...order,
+            items,
+            subtotal,
+            tax,
+            shipping,
+            total,
+            formattedTotal: `$${total.toFixed(2)}`,
+            status: getOrderStatus(order),
+          };
+        });
+
+        // Pagination logic inline
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const start = (page - 1) * limit;
+
+        res.json({
+          orders: enriched.slice(start, start + limit),
+          total: enriched.length,
+          page,
+          pages: Math.ceil(enriched.length / limit),
+        });
+      }
+
+      // Helper functions that should be in separate modules
+      function calculateMembershipLevel(user) {
+        const orderCount = getOrderCount(user.id);
+        if (orderCount > 100) return 'platinum';
+        if (orderCount > 50) return 'gold';
+        if (orderCount > 10) return 'silver';
+        return 'bronze';
+      }
+
+      function getOrderCount(userId) {
+        return fakeDbQuery(`SELECT COUNT(*) as count FROM orders WHERE user_id = ${userId}`).count || 0;
+      }
+
+      function getOrderStatus(order) {
+        if (order.cancelledAt) return 'cancelled';
+        if (order.deliveredAt) return 'delivered';
+        if (order.shippedAt) return 'shipped';
+        if (order.paidAt) return 'paid';
+        return 'pending';
+      }
+
+      function formatTimeAgo(date) {
+        const ms = Date.now() - new Date(date).getTime();
+        const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+        if (days > 365) return `${Math.floor(days / 365)} years ago`;
+        if (days > 30) return `${Math.floor(days / 30)} months ago`;
+        if (days > 0) return `${days} days ago`;
+        return 'today';
+      }
+
+      function fakeDbQuery(sql) {
+        console.log('SQL:', sql);
+        return {};
+      }
+
+      module.exports = { handleGetUser, handleCreateUser, handleListOrders };
+      ```
+
+      `src/GodClass.js`:
+      ```js
+      'use strict';
+
+      /**
+       * GodClass.js — Architecture anti-pattern: God Object
+       *
+       * This class handles EVERYTHING:
+       * - Database queries
+       * - Input validation
+       * - Data formatting
+       * - Email sending
+       * - File operations
+       * - Caching
+       * - Report generation
+       * - Authentication
+       *
+       * It should be decomposed into focused services.
+       */
+
+      class AppManager {
+        constructor() {
+          this.db = {};
+          this.cache = {};
+          this.emailQueue = [];
+          this.files = {};
+          this.sessions = {};
+          this.config = {};
+          this.logs = [];
+        }
+
+        // ========== DATABASE OPERATIONS ==========
+
+        dbConnect(host, port, database) {
+          this.db = { host, port, database, connected: true };
+          this.log('Connected to database: ' + database);
+        }
+
+        dbQuery(sql, params) {
+          this.log('SQL: ' + sql);
+          if (!this.db.connected) throw new Error('Not connected');
+          return [];
+        }
+
+        dbInsert(table, data) {
+          const columns = Object.keys(data).join(', ');
+          const values = Object.values(data).map(v => `'${v}'`).join(', ');
+          return this.dbQuery(`INSERT INTO ${table} (${columns}) VALUES (${values})`);
+        }
+
+        dbUpdate(table, id, data) {
+          const sets = Object.entries(data).map(([k, v]) => `${k} = '${v}'`).join(', ');
+          return this.dbQuery(`UPDATE ${table} SET ${sets} WHERE id = ${id}`);
+        }
+
+        dbDelete(table, id) {
+          return this.dbQuery(`DELETE FROM ${table} WHERE id = ${id}`);
+        }
+
+        dbFindById(table, id) {
+          return this.dbQuery(`SELECT * FROM ${table} WHERE id = ${id}`);
+        }
+
+        dbFindAll(table, conditions) {
+          let sql = `SELECT * FROM ${table}`;
+          if (conditions) {
+            const where = Object.entries(conditions).map(([k, v]) => `${k} = '${v}'`).join(' AND ');
+            sql += ` WHERE ${where}`;
+          }
+          return this.dbQuery(sql);
+        }
+
+        dbCount(table) {
+          return this.dbQuery(`SELECT COUNT(*) FROM ${table}`);
+        }
+
+        dbTransaction(operations) {
+          this.dbQuery('BEGIN');
+          try {
+            for (const op of operations) {
+              op();
+            }
+            this.dbQuery('COMMIT');
+          } catch (e) {
+            this.dbQuery('ROLLBACK');
+            throw e;
+          }
+        }
+
+        // ========== VALIDATION ==========
+
+        validateEmail(email) {
+          if (!email) return { valid: false, error: 'Email required' };
+          if (typeof email !== 'string') return { valid: false, error: 'Email must be string' };
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { valid: false, error: 'Invalid format' };
+          return { valid: true };
+        }
+
+        validatePassword(password) {
+          if (!password) return { valid: false, error: 'Password required' };
+          if (password.length < 8) return { valid: false, error: 'Too short' };
+          if (!/[A-Z]/.test(password)) return { valid: false, error: 'Needs uppercase' };
+          if (!/[a-z]/.test(password)) return { valid: false, error: 'Needs lowercase' };
+          if (!/[0-9]/.test(password)) return { valid: false, error: 'Needs number' };
+          return { valid: true };
+        }
+
+        validateUsername(username) {
+          if (!username) return { valid: false, error: 'Username required' };
+          if (username.length < 3) return { valid: false, error: 'Too short' };
+          if (username.length > 20) return { valid: false, error: 'Too long' };
+          if (!/^[a-zA-Z0-9_]+$/.test(username)) return { valid: false, error: 'Invalid characters' };
+          return { valid: true };
+        }
+
+        validateAge(age) {
+          if (typeof age !== 'number') return { valid: false, error: 'Must be number' };
+          if (age < 0 || age > 150) return { valid: false, error: 'Out of range' };
+          return { valid: true };
+        }
+
+        validatePhone(phone) {
+          if (!phone) return { valid: false, error: 'Phone required' };
+          const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+          if (!/^\+?\d{10,15}$/.test(cleaned)) return { valid: false, error: 'Invalid format' };
+          return { valid: true };
+        }
+
+        validateAddress(address) {
+          if (!address) return { valid: false, error: 'Address required' };
+          if (!address.street) return { valid: false, error: 'Street required' };
+          if (!address.city) return { valid: false, error: 'City required' };
+          if (!address.zip) return { valid: false, error: 'Zip required' };
+          return { valid: true };
+        }
+
+        validateCreditCard(number) {
+          if (!number) return { valid: false, error: 'Card number required' };
+          const cleaned = number.replace(/[\s\-]/g, '');
+          if (!/^\d{13,19}$/.test(cleaned)) return { valid: false, error: 'Invalid format' };
+          return { valid: true };
+        }
+
+        // ========== FORMATTING ==========
+
+        formatDate(date) {
+          const d = new Date(date);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        formatDateTime(date) {
+          return `${this.formatDate(date)} ${new Date(date).toTimeString().slice(0, 8)}`;
+        }
+
+        formatCurrency(amount, currency) {
+          const symbols = { USD: '$', EUR: '€', GBP: '£', JPY: '¥' };
+          return `${symbols[currency] || currency} ${amount.toFixed(2)}`;
+        }
+
+        formatPhoneNumber(phone) {
+          const cleaned = phone.replace(/\D/g, '');
+          if (cleaned.length === 10) {
+            return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+          }
+          return phone;
+        }
+
+        formatName(first, last) {
+          return `${first.charAt(0).toUpperCase()}${first.slice(1)} ${last.charAt(0).toUpperCase()}${last.slice(1)}`;
+        }
+
+        formatAddress(address) {
+          return `${address.street}\n${address.city}, ${address.state} ${address.zip}`;
+        }
+
+        formatFileSize(bytes) {
+          const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+          let i = 0;
+          while (bytes >= 1024 && i < units.length - 1) {
+            bytes /= 1024;
+            i++;
+          }
+          return `${bytes.toFixed(1)} ${units[i]}`;
+        }
+
+        formatPercentage(value, total) {
+          return `${((value / total) * 100).toFixed(1)}%`;
+        }
+
+        formatDuration(ms) {
+          const seconds = Math.floor(ms / 1000);
+          const minutes = Math.floor(seconds / 60);
+          const hours = Math.floor(minutes / 60);
+          if (hours > 0) return `${hours}h ${minutes % 60}m`;
+          if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+          return `${seconds}s`;
+        }
+
+        // ========== EMAIL OPERATIONS ==========
+
+        sendEmail(to, subject, body) {
+          this.emailQueue.push({ to, subject, body, sentAt: null });
+          this.log(`Email queued: ${subject} -> ${to}`);
+        }
+
+        sendWelcomeEmail(user) {
+          this.sendEmail(user.email, 'Welcome!', `Hi ${user.name}, welcome aboard!`);
+        }
+
+        sendPasswordResetEmail(user, token) {
+          this.sendEmail(user.email, 'Password Reset', `Reset link: /reset?token=${token}`);
+        }
+
+        sendOrderConfirmation(user, order) {
+          const total = this.formatCurrency(order.total, order.currency);
+          this.sendEmail(user.email, `Order #${order.id} Confirmed`, `Total: ${total}`);
+        }
+
+        sendInvoice(user, invoice) {
+          this.sendEmail(user.email, `Invoice #${invoice.id}`, this.generateInvoiceHtml(invoice));
+        }
+
+        processEmailQueue() {
+          while (this.emailQueue.length > 0) {
+            const email = this.emailQueue.shift();
+            email.sentAt = new Date();
+            this.log(`Email sent: ${email.subject}`);
+          }
+        }
+
+        generateInvoiceHtml(invoice) {
+          let html = `<h1>Invoice #${invoice.id}</h1>`;
+          html += `<p>Date: ${this.formatDate(invoice.date)}</p>`;
+          html += '<table><tr><th>Item</th><th>Qty</th><th>Price</th></tr>';
+          for (const item of invoice.items || []) {
+            html += `<tr><td>${item.name}</td><td>${item.qty}</td><td>${this.formatCurrency(item.price, 'USD')}</td></tr>`;
+          }
+          html += '</table>';
+          html += `<p>Total: ${this.formatCurrency(invoice.total, 'USD')}</p>`;
+          return html;
+        }
+
+        // ========== FILE OPERATIONS ==========
+
+        readFile(path) {
+          this.log('Reading file: ' + path);
+          return this.files[path] || null;
+        }
+
+        writeFile(path, content) {
+          this.log('Writing file: ' + path);
+          this.files[path] = content;
+        }
+
+        deleteFile(path) {
+          this.log('Deleting file: ' + path);
+          delete this.files[path];
+        }
+
+        listFiles(directory) {
+          return Object.keys(this.files).filter(f => f.startsWith(directory));
+        }
+
+        uploadFile(path, content, metadata) {
+          this.writeFile(path, content);
+          this.dbInsert('file_metadata', { path, ...metadata });
+        }
+
+        // ========== CACHE OPERATIONS ==========
+
+        cacheGet(key) {
+          const entry = this.cache[key];
+          if (!entry) return null;
+          if (entry.expiresAt && entry.expiresAt < Date.now()) {
+            delete this.cache[key];
+            return null;
+          }
+          return entry.value;
+        }
+
+        cacheSet(key, value, ttlMs) {
+          this.cache[key] = {
+            value,
+            expiresAt: ttlMs ? Date.now() + ttlMs : null,
+          };
+        }
+
+        cacheDelete(key) {
+          delete this.cache[key];
+        }
+
+        cacheClear() {
+          this.cache = {};
+        }
+
+        // ========== AUTHENTICATION ==========
+
+        createSession(userId) {
+          const token = Math.random().toString(36).substring(2);
+          this.sessions[token] = { userId, createdAt: Date.now() };
+          return token;
+        }
+
+        validateSession(token) {
+          const session = this.sessions[token];
+          if (!session) return null;
+          if (Date.now() - session.createdAt > 24 * 60 * 60 * 1000) {
+            delete this.sessions[token];
+            return null;
+          }
+          return session;
+        }
+
+        destroySession(token) {
+          delete this.sessions[token];
+        }
+
+        // ========== REPORT GENERATION ==========
+
+        generateUserReport(userId) {
+          const user = this.dbFindById('users', userId);
+          const orders = this.dbFindAll('orders', { userId });
+          const total = orders.reduce((sum, o) => sum + o.total, 0);
+
+          return {
+            user,
+            orderCount: orders.length,
+            totalSpent: this.formatCurrency(total, 'USD'),
+            memberSince: this.formatDate(user.createdAt),
+            report: `User Report for ${user.name}: ${orders.length} orders, ${this.formatCurrency(total, 'USD')} spent`,
+          };
+        }
+
+        generateSalesReport(startDate, endDate) {
+          const orders = this.dbFindAll('orders');
+          const filtered = orders.filter(o => {
+            const d = new Date(o.createdAt);
+            return d >= new Date(startDate) && d <= new Date(endDate);
+          });
+
+          const total = filtered.reduce((sum, o) => sum + o.total, 0);
+          const avg = filtered.length > 0 ? total / filtered.length : 0;
+
+          return {
+            period: `${this.formatDate(startDate)} - ${this.formatDate(endDate)}`,
+            orderCount: filtered.length,
+            totalRevenue: this.formatCurrency(total, 'USD'),
+            averageOrder: this.formatCurrency(avg, 'USD'),
+          };
+        }
+
+        generateInventoryReport() {
+          const items = this.dbFindAll('inventory');
+          const lowStock = items.filter(i => i.quantity < 10);
+          const outOfStock = items.filter(i => i.quantity === 0);
+
+          return {
+            totalItems: items.length,
+            lowStock: lowStock.length,
+            outOfStock: outOfStock.length,
+            items: items.map(i => ({
+              name: i.name,
+              quantity: i.quantity,
+              status: i.quantity === 0 ? 'OUT' : i.quantity < 10 ? 'LOW' : 'OK',
+            })),
+          };
+        }
+
+        // ========== LOGGING ==========
+
+        log(message) {
+          const entry = `[${new Date().toISOString()}] ${message}`;
+          this.logs.push(entry);
+          console.log(entry);
+        }
+
+        getLogs(count) {
+          return this.logs.slice(-count);
+        }
+
+        clearLogs() {
+          this.logs = [];
+        }
+
+        // ========== CONFIGURATION ==========
+
+        setConfig(key, value) {
+          this.config[key] = value;
+        }
+
+        getConfig(key, defaultValue) {
+          return this.config[key] !== undefined ? this.config[key] : defaultValue;
+        }
+      }
+
+      module.exports = AppManager;
+      ```
+
+      `src/moduleA.js`:
+      ```js
+      'use strict';
+
+      /**
+       * moduleA.js — Circular dependency with moduleB.
+       * moduleA imports moduleB, and moduleB imports moduleA.
+       */
+
+      const moduleB = require('./moduleB');
+
+      function processOrder(order) {
+        const validated = validateOrder(order);
+        if (!validated.valid) {
+          throw new Error(validated.error);
+        }
+        // Uses moduleB to calculate totals
+        const total = moduleB.calculateOrderTotal(order);
+        return { ...order, total, status: 'processed' };
+      }
+
+      function validateOrder(order) {
+        if (!order) return { valid: false, error: 'Order required' };
+        if (!order.items || order.items.length === 0) {
+          return { valid: false, error: 'Order must have items' };
+        }
+        // Uses moduleB for item validation (circular!)
+        for (const item of order.items) {
+          if (!moduleB.isValidItem(item)) {
+            return { valid: false, error: `Invalid item: ${item.id}` };
+          }
+        }
+        return { valid: true };
+      }
+
+      function getOrderSummary(orderId) {
+        // Depends on moduleB for formatting
+        return moduleB.formatOrderSummary(orderId);
+      }
+
+      module.exports = { processOrder, validateOrder, getOrderSummary };
+      ```
+
+      `src/moduleB.js`:
+      ```js
+      'use strict';
+
+      /**
+       * moduleB.js — Circular dependency with moduleA.
+       * moduleB imports moduleA, and moduleA imports moduleB.
+       */
+
+      const moduleA = require('./moduleA');
+
+      function calculateOrderTotal(order) {
+        let total = 0;
+        for (const item of order.items) {
+          total += item.price * item.quantity;
+        }
+        // Apply discount if order is valid (circular call back to moduleA!)
+        if (total > 100) {
+          const validated = moduleA.validateOrder(order);
+          if (validated.valid) {
+            total *= 0.9; // 10% discount
+          }
+        }
+        return total;
+      }
+
+      function isValidItem(item) {
+        if (!item) return false;
+        if (!item.id || !item.price || !item.quantity) return false;
+        if (item.price < 0 || item.quantity < 0) return false;
+        return true;
+      }
+
+      function formatOrderSummary(orderId) {
+        // This calls back into moduleA (circular)
+        return {
+          orderId,
+          formatted: true,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      function getDiscountedOrders(orders) {
+        // Processes through moduleA (circular)
+        return orders
+          .filter(o => moduleA.validateOrder(o).valid)
+          .map(o => moduleA.processOrder(o));
+      }
+
+      module.exports = { calculateOrderTotal, isValidItem, formatOrderSummary, getDiscountedOrders };
+      ```
+
+      `src/utils.js`:
+      ```js
+      'use strict';
+
+      /**
+       * utils.js — Architecture anti-pattern: Utility dumping ground.
+       *
+       * This file contains completely unrelated functions mixed together:
+       * - String manipulation
+       * - Math operations
+       * - Date formatting
+       * - Array helpers
+       * - HTTP helpers
+       * - Color conversion
+       * - Crypto operations
+       *
+       * These should be organized into focused modules by domain.
+       */
+
+      // --- String utils ---
+      function capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }
+
+      function slugify(str) {
+        return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      }
+
+      function truncate(str, maxLen) {
+        if (str.length <= maxLen) return str;
+        return str.slice(0, maxLen - 3) + '...';
+      }
+
+      function camelToSnake(str) {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      }
+
+      function snakeToCamel(str) {
+        return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      }
+
+      // --- Math utils ---
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      function roundTo(num, decimals) {
+        return Number(num.toFixed(decimals));
+      }
+
+      function average(arr) {
+        return arr.reduce((sum, val) => sum + val, 0) / arr.length;
+      }
+
+      function median(arr) {
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      }
+
+      // --- Date utils ---
+      function daysAgo(n) {
+        const d = new Date();
+        d.setDate(d.getDate() - n);
+        return d;
+      }
+
+      function isWeekend(date) {
+        const day = date.getDay();
+        return day === 0 || day === 6;
+      }
+
+      function formatRelative(date) {
+        const diff = Date.now() - date.getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+      }
+
+      // --- Array utils ---
+      function chunk(arr, size) {
+        const chunks = [];
+        for (let i = 0; i < arr.length; i += size) {
+          chunks.push(arr.slice(i, i + size));
+        }
+        return chunks;
+      }
+
+      function unique(arr) {
+        return [...new Set(arr)];
+      }
+
+      function flatten(arr) {
+        return arr.reduce((flat, item) =>
+          flat.concat(Array.isArray(item) ? flatten(item) : item), []);
+      }
+
+      function groupBy(arr, key) {
+        return arr.reduce((groups, item) => {
+          const val = item[key];
+          groups[val] = groups[val] || [];
+          groups[val].push(item);
+          return groups;
+        }, {});
+      }
+
+      // --- HTTP utils ---
+      function parseQueryString(qs) {
+        return Object.fromEntries(new URLSearchParams(qs));
+      }
+
+      function buildQueryString(params) {
+        return new URLSearchParams(params).toString();
+      }
+
+      function isUrl(str) {
+        try { new URL(str); return true; } catch { return false; }
+      }
+
+      // --- Color utils (why is this here?) ---
+      function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        } : null;
+      }
+
+      function rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+      }
+
+      // --- Crypto utils (security-sensitive, shouldn't be in generic utils) ---
+      function hashString(str) {
+        const crypto = require('crypto');
+        return crypto.createHash('sha256').update(str).digest('hex');
+      }
+
+      function generateToken(length) {
+        const crypto = require('crypto');
+        return crypto.randomBytes(length).toString('hex');
+      }
+
+      module.exports = {
+        capitalize, slugify, truncate, camelToSnake, snakeToCamel,
+        clamp, randomInt, roundTo, average, median,
+        daysAgo, isWeekend, formatRelative,
+        chunk, unique, flatten, groupBy,
+        parseQueryString, buildQueryString, isUrl,
+        hexToRgb, rgbToHex,
+        hashString, generateToken,
+      };
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: evidence cited
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 3
+
+    # LLM rubric: finding quality
+    - type: llm-rubric
+      value: |
+        Evaluate the architecture review. The spaghetti-arch-repo has:
+        - God class: GodClass.js (500+ lines) doing DB, validation, formatting, email
+        - Circular dependency: moduleA imports moduleB, moduleB imports moduleA
+        - Layer violations: controller.js directly queries database with inline business logic
+        - Utility dumping ground: utils.js with unrelated functions
+        The report should identify these patterns with specific file references.
+      metric: finding_quality
+      weight: 3
+
+    # LLM rubric: coaching quality
+    - type: llm-rubric
+      value: |
+        Evaluate the architecture recommendations.
+        Good recommendations should suggest:
+        - How to decompose the god class into focused services
+        - How to break the circular dependency
+        - How to establish proper layering (controller → service → repository)
+        - How to organize the utility functions by domain
+      metric: coaching_quality
+      weight: 2
+
+    # Transcript: evidence gathering
+    - type: javascript
+      value: file://./graders/transcript/evidence-gathering.js
+      metric: evidence_gathering
+      weight: 2

@@ -1,0 +1,313 @@
+import { useState, useEffect } from 'react';
+
+/**
+ * MonolithDashboard — a god component with numerous code quality issues.
+ * Used as a fixture for refactoring evals.
+ *
+ * Issues present:
+ * 1. Data fetching mixed with rendering (mixed concerns)
+ * 2. Too many useState calls (8 state variables)
+ * 3. Multiple unrelated useEffect hooks
+ * 4. Derived state anti-pattern (filteredUsers in state)
+ * 5. Inline event handlers with complex logic
+ * 6. Deep JSX nesting (7+ levels)
+ * 7. ~250 lines — way too long for a single component
+ * 8. Hardcoded API URLs
+ * 9. No error boundaries
+ * 10. Duplicated rendering patterns
+ */
+export function MonolithDashboard() {
+  const [users, setUsers] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [activeTab, setActiveTab] = useState('users');
+
+  // Fetch users
+  useEffect(() => {
+    setLoading(true);
+    fetch('https://jsonplaceholder.typicode.com/users')
+      .then((res) => res.json())
+      .then((data) => {
+        setUsers(data);
+        setFilteredUsers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  // Fetch posts
+  useEffect(() => {
+    fetch('https://jsonplaceholder.typicode.com/posts')
+      .then((res) => res.json())
+      .then((data) => setPosts(data))
+      .catch((err) => setError(err.message));
+  }, []);
+
+  // Derived state anti-pattern: filter users whenever search or users change
+  useEffect(() => {
+    const result = users.filter(
+      (user) =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(result);
+  }, [users, searchTerm]);
+
+  // Sort users when sort order changes
+  useEffect(() => {
+    const sorted = [...filteredUsers].sort((a, b) => {
+      if (sortOrder === 'asc') return a.name.localeCompare(b.name);
+      return b.name.localeCompare(a.name);
+    });
+    setFilteredUsers(sorted);
+  }, [sortOrder]);
+
+  // Update document title
+  useEffect(() => {
+    document.title = `Dashboard - ${users.length} users`;
+    return () => {
+      document.title = 'App';
+    };
+  }, [users.length]);
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ color: 'red', padding: '20px' }}>
+        <h2>Error</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          backgroundColor: '#f5f5f5',
+        }}
+      >
+        <h1 style={{ margin: 0, fontSize: '24px' }}>Dashboard</h1>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+          />
+          <button
+            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            style={{ padding: '8px 16px' }}
+          >
+            Sort {sortOrder === 'asc' ? '↓' : '↑'}
+          </button>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            style={{ padding: '8px 16px' }}
+          >
+            ⚙️ Settings
+          </button>
+        </div>
+      </div>
+
+      {showSettings && (
+        <div
+          style={{
+            padding: '16px',
+            backgroundColor: '#fff8e1',
+            borderBottom: '1px solid #e0e0e0',
+          }}
+        >
+          <h3>Settings</h3>
+          <div>
+            <label>
+              <input type="checkbox" /> Show email addresses
+            </label>
+          </div>
+          <div>
+            <label>
+              <input type="checkbox" /> Compact mode
+            </label>
+          </div>
+          <button onClick={() => setShowSettings(false)}>Close</button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '8px', padding: '16px' }}>
+        <button
+          onClick={() => setActiveTab('users')}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'users' ? '#1a73e8' : '#e0e0e0',
+            color: activeTab === 'users' ? 'white' : 'black',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Users ({filteredUsers.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('posts')}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: activeTab === 'posts' ? '#1a73e8' : '#e0e0e0',
+            color: activeTab === 'posts' ? 'white' : 'black',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Posts ({posts.length})
+        </button>
+      </div>
+
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {activeTab === 'users' && (
+            <div>
+              {filteredUsers.length === 0 ? (
+                <p>No users found matching "{searchTerm}"</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {filteredUsers.map((user) => (
+                    <div
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      style={{
+                        padding: '16px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        backgroundColor:
+                          selectedUser?.id === user.id ? '#e3f2fd' : 'white',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <h3 style={{ margin: '0 0 4px' }}>{user.name}</h3>
+                          <p style={{ margin: 0, color: '#666' }}>{user.email}</p>
+                        </div>
+                        <div style={{ color: '#999', fontSize: '14px' }}>
+                          {user.company?.name}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'posts' && (
+            <div>
+              {posts.length === 0 ? (
+                <p>No posts available.</p>
+              ) : (
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {posts.slice(0, 20).map((post) => (
+                    <div
+                      key={post.id}
+                      style={{
+                        padding: '16px',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <h3 style={{ margin: '0 0 8px' }}>{post.title}</h3>
+                      <p style={{ margin: 0, color: '#666' }}>{post.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {selectedUser && (
+          <div
+            style={{
+              width: '300px',
+              borderLeft: '1px solid #e0e0e0',
+              padding: '16px',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <h2>{selectedUser.name}</h2>
+              <button onClick={() => setSelectedUser(null)}>✕</button>
+            </div>
+            <div>
+              <p><strong>Email:</strong> {selectedUser.email}</p>
+              <p><strong>Phone:</strong> {selectedUser.phone}</p>
+              <p><strong>Website:</strong> {selectedUser.website}</p>
+              <p><strong>Company:</strong> {selectedUser.company?.name}</p>
+              <p>
+                <strong>Address:</strong>{' '}
+                {selectedUser.address?.street}, {selectedUser.address?.city}
+              </p>
+            </div>
+            <h3>Posts by {selectedUser.name}</h3>
+            <div>
+              {posts
+                .filter((p) => p.userId === selectedUser.id)
+                .map((post) => (
+                  <div
+                    key={post.id}
+                    style={{
+                      padding: '8px',
+                      marginBottom: '8px',
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    <h4 style={{ margin: '0 0 4px' }}>{post.title}</h4>
+                    <p style={{ margin: 0, fontSize: '14px' }}>{post.body}</p>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          padding: '12px 16px',
+          borderTop: '1px solid #e0e0e0',
+          backgroundColor: '#f5f5f5',
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '14px',
+          color: '#666',
+        }}
+      >
+        <span>Total: {users.length} users, {posts.length} posts</span>
+        <span>Showing: {filteredUsers.length} users</span>
+      </div>
+    </div>
+  );
+}
+
+export default MonolithDashboard;

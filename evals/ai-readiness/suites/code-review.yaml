@@ -1,0 +1,466 @@
+# suites/code-review.yaml
+# Positive eval cases for /ai-readiness:code-review
+# Tests that the agent identifies code quality issues in a messy codebase.
+
+- description: "Code review on messy-repo should find naming, duplication, and dead code"
+  metadata:
+    suite: code-review
+    case: messy-repo-positive
+  vars:
+    fixture: "{{fixtureRoot}}/messy-repo"
+    prompt: |
+      Run /ai-readiness:code-review on the following repository files.
+      Review the codebase for code quality: naming conventions, duplication,
+      dead code, code smells, and maintainability.
+      Produce a code review report.
+
+      {% raw %}
+      `README.md`:
+      ```md
+      # MyApp
+
+      A web application built with Express and MongoDB.
+
+      ## Setup
+
+      ```bash
+      grunt build
+      bower install
+      node server.js
+      ```
+
+      ## Architecture
+
+      This app uses a microservices architecture with the following components:
+      - API Gateway (port 3000)
+      - Auth Service (port 3001)
+      - User Service (port 3002)
+      - Notification Service (port 3003)
+
+      ## Deployment
+
+      Deploy using Heroku:
+      ```bash
+      heroku create
+      git push heroku master
+      ```
+
+      ## API Documentation
+
+      See the Swagger docs at /api-docs (requires running the API Gateway).
+
+      ## Contributing
+
+      1. Fork the repo
+      2. Create a feature branch
+      3. Submit a PR
+
+      *Last updated: March 2022*
+      ```
+
+      `src/index.js`:
+      ```js
+      'use strict';
+
+      const helpers = require('./helpers');
+      const UserManager = require('./UserManager');
+
+      // const express = require('express');
+      // const app = express();
+      // app.use(express.json());
+
+      // TODO: move this to config (2023-01-15)
+      const PORT = 3000;
+      const DB_HOST = 'localhost';
+
+      // const oldRouter = require('./old-router');
+      // app.use('/api/v1', oldRouter);
+
+      // TODO: implement proper logging - @mike 2023-02-20
+      // const winston = require('winston');
+      // const logger = winston.createLogger({ ... });
+
+      function startApp() {
+        const mgr = new UserManager();
+
+        // TODO: this is temporary, replace with proper auth
+        const isAdmin = true;
+
+        // const metrics = require('./metrics');
+        // metrics.init();
+
+        console.log('Starting app on port ' + PORT);
+        console.log('DB host: ' + DB_HOST);
+
+        // Old initialization code - keeping for reference
+        // if (process.env.LEGACY_MODE) {
+        //   const legacy = require('./legacy-adapter');
+        //   legacy.init(app);
+        //   legacy.migrateData();
+        //   console.log('Legacy mode enabled');
+        // }
+
+        const data = mgr.getAll();
+        console.log('loaded ' + data.length + ' records');
+
+        return mgr;
+      }
+
+      // TODO: add graceful shutdown (2023-03-01)
+      // process.on('SIGTERM', () => { ... });
+
+      startApp();
+      ```
+
+      `src/helpers.js`:
+      ```js
+      'use strict';
+
+      // Mixed camelCase and snake_case naming throughout
+
+      function get_user_data(id) {
+        // TODO: connect to real DB
+        return { id: id, name: 'test' };
+      }
+
+      function formatUserName(data) {
+        if (data && data.name) {
+          return data.name.charAt(0).toUpperCase() + data.name.slice(1);
+        }
+        return '';
+      }
+
+      function process_items(items) {
+        var temp = [];
+        for (var i = 0; i < items.length; i++) {
+          var val = items[i];
+          if (val != null && val != undefined) {
+            var data = transform_item(val);
+            temp.push(data);
+          }
+        }
+        return temp;
+      }
+
+      function transform_item(val) {
+        var result = {};
+        result.id = val.id;
+        result.n = val.name; // abbreviated field name
+        result.d = val.description; // abbreviated field name
+        result.ts = Date.now();
+        return result;
+      }
+
+      function calculateTotal(arr) {
+        var temp = 0;
+        for (var i = 0; i < arr.length; i++) {
+          temp = temp + arr[i].amount;
+        }
+        return temp;
+      }
+
+      // This does the same thing as calculateTotal but for a different field
+      function calculate_sum(arr) {
+        var temp = 0;
+        for (var i = 0; i < arr.length; i++) {
+          temp = temp + arr[i].value;
+        }
+        return temp;
+      }
+
+      function doStuff(x) {
+        if (x == true) {
+          return 1;
+        } else if (x == false) {
+          return 0;
+        }
+        return -1;
+      }
+
+      function handleThing(data) {
+        var temp = data;
+        var result = temp;
+        return result;
+      }
+
+      function check(val) {
+        if (val) return true;
+        return false;
+      }
+
+      module.exports = {
+        get_user_data,
+        formatUserName,
+        process_items,
+        transform_item,
+        calculateTotal,
+        calculate_sum,
+        doStuff,
+        handleThing,
+        check,
+      };
+      ```
+
+      `src/UserManager.js`:
+      ```js
+      'use strict';
+
+      // God class: does everything — DB, validation, formatting, email, logging
+
+      class UserManager {
+        constructor() {
+          this.users = [];
+          this.emailQueue = [];
+          this.logBuffer = [];
+        }
+
+        // ---- Database operations ----
+
+        getAll() {
+          this.log('Getting all users');
+          return this.users;
+        }
+
+        getById(id) {
+          this.log('Getting user by id: ' + id);
+          for (var i = 0; i < this.users.length; i++) {
+            if (this.users[i].id == id) {
+              return this.users[i];
+            }
+          }
+          return null;
+        }
+
+        save(user) {
+          this.log('Saving user');
+          if (this.validateUser(user)) {
+            user.id = this.users.length + 1;
+            user.createdAt = new Date();
+            this.users.push(user);
+            this.sendWelcomeEmail(user);
+            this.formatAndLog(user);
+            return user;
+          }
+          return null;
+        }
+
+        update(id, data) {
+          this.log('Updating user: ' + id);
+          var user = this.getById(id);
+          if (user) {
+            if (data.name) user.name = data.name;
+            if (data.email) {
+              if (this.validateEmail(data.email)) {
+                user.email = data.email;
+                this.sendEmailChangedNotification(user);
+              }
+            }
+            if (data.role) user.role = data.role;
+            if (data.status) user.status = data.status;
+            user.updatedAt = new Date();
+            this.formatAndLog(user);
+            return user;
+          }
+          return null;
+        }
+
+        delete(id) {
+          this.log('Deleting user: ' + id);
+          var idx = -1;
+          for (var i = 0; i < this.users.length; i++) {
+            if (this.users[i].id == id) {
+              idx = i;
+              break;
+            }
+          }
+          if (idx >= 0) {
+            var user = this.users[idx];
+            this.users.splice(idx, 1);
+            this.sendGoodbyeEmail(user);
+            return true;
+          }
+          return false;
+        }
+
+        // ---- Validation ----
+
+        validateUser(user) {
+          if (!user) return false;
+          if (!user.name || user.name.length < 1) return false;
+          if (!user.email) return false;
+          if (!this.validateEmail(user.email)) return false;
+          return true;
+        }
+
+        validateEmail(email) {
+          // Simple check
+          if (!email) return false;
+          if (email.indexOf('@') < 0) return false;
+          if (email.indexOf('.') < 0) return false;
+          return true;
+        }
+
+        // ---- Formatting ----
+
+        formatUser(user) {
+          return {
+            id: user.id,
+            displayName: this.formatName(user.name),
+            email: user.email.toLowerCase(),
+            role: user.role || 'user',
+            status: user.status || 'active',
+            memberSince: this.formatDate(user.createdAt),
+          };
+        }
+
+        formatName(name) {
+          if (!name) return '';
+          return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        }
+
+        formatDate(date) {
+          if (!date) return 'N/A';
+          var d = new Date(date);
+          return d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0');
+        }
+
+        formatAndLog(user) {
+          var formatted = this.formatUser(user);
+          this.log('User formatted: ' + JSON.stringify(formatted));
+        }
+
+        // ---- Email sending ----
+
+        sendWelcomeEmail(user) {
+          this.log('Sending welcome email to: ' + user.email);
+          this.emailQueue.push({
+            to: user.email,
+            subject: 'Welcome!',
+            body: 'Hello ' + user.name + ', welcome to our platform!',
+            type: 'welcome',
+          });
+          this.processEmailQueue();
+        }
+
+        sendEmailChangedNotification(user) {
+          this.log('Sending email change notification to: ' + user.email);
+          this.emailQueue.push({
+            to: user.email,
+            subject: 'Email Updated',
+            body: 'Your email has been updated to ' + user.email,
+            type: 'notification',
+          });
+          this.processEmailQueue();
+        }
+
+        sendGoodbyeEmail(user) {
+          this.log('Sending goodbye email to: ' + user.email);
+          this.emailQueue.push({
+            to: user.email,
+            subject: 'Sorry to see you go',
+            body: 'Your account has been deleted.',
+            type: 'goodbye',
+          });
+          this.processEmailQueue();
+        }
+
+        processEmailQueue() {
+          while (this.emailQueue.length > 0) {
+            var email = this.emailQueue.shift();
+            // Simulate sending
+            this.log('EMAIL SENT: ' + email.subject + ' -> ' + email.to);
+          }
+        }
+
+        // ---- Logging ----
+
+        log(message) {
+          var entry = '[' + new Date().toISOString() + '] ' + message;
+          this.logBuffer.push(entry);
+          console.log(entry);
+        }
+
+        getLogBuffer() {
+          return this.logBuffer;
+        }
+
+        clearLogBuffer() {
+          this.logBuffer = [];
+        }
+
+        // ---- Reporting ----
+
+        getUserStats() {
+          var stats = {
+            total: this.users.length,
+            active: 0,
+            inactive: 0,
+            admins: 0,
+          };
+
+          for (var i = 0; i < this.users.length; i++) {
+            if (this.users[i].status === 'active') stats.active++;
+            else stats.inactive++;
+            if (this.users[i].role === 'admin') stats.admins++;
+          }
+
+          return stats;
+        }
+
+        exportUsers(format) {
+          if (format === 'json') {
+            return JSON.stringify(this.users.map(u => this.formatUser(u)));
+          } else if (format === 'csv') {
+            var csv = 'id,name,email,role,status\n';
+            for (var i = 0; i < this.users.length; i++) {
+              var u = this.users[i];
+              csv += u.id + ',' + u.name + ',' + u.email + ',' +
+                (u.role || 'user') + ',' + (u.status || 'active') + '\n';
+            }
+            return csv;
+          }
+          return null;
+        }
+      }
+
+      module.exports = UserManager;
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: evidence cited
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 3
+
+    # LLM rubric: finding quality
+    - type: llm-rubric
+      value: |
+        Evaluate the code review report. The messy-repo has:
+        - Inconsistent naming: camelCase mixed with snake_case in helpers.js
+        - Vague variable names: data, temp, val in helpers.js
+        - Commented-out code blocks in index.js
+        - TODO comments from 2 years ago in index.js
+        - God class: UserManager.js doing DB, validation, formatting, email
+        - Duplicated logic across files
+        - No tests directory
+        The review should find most of these with file:line references.
+      metric: finding_quality
+      weight: 3
+
+    # LLM rubric: coaching quality
+    - type: llm-rubric
+      value: |
+        Evaluate the recommendations in this code review.
+        Good recommendations should be specific about WHAT to rename,
+        WHERE to extract duplicated logic, and HOW to refactor the god class.
+      metric: coaching_quality
+      weight: 2
+
+    # Transcript: should have read files before making claims
+    - type: javascript
+      value: file://./graders/transcript/evidence-gathering.js
+      metric: evidence_gathering
+      weight: 2

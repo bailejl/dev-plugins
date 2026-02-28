@@ -1,0 +1,88 @@
+# evals/ai-readiness/promptfooconfig.yaml
+# Eval configuration for the ai-readiness plugin.
+#
+# Usage:
+#   cd evals/ai-readiness
+#   npx promptfoo eval
+#   npx promptfoo eval --filter-pattern "security"
+
+# ---------------------------------------------------------------------------
+# Prompts — each test case provides its own prompt via the "prompt" variable
+# ---------------------------------------------------------------------------
+prompts:
+  - "{{prompt}}"
+
+# ---------------------------------------------------------------------------
+# Providers
+# ---------------------------------------------------------------------------
+providers:
+  - id: anthropic:messages:claude-sonnet-4-20250514
+    label: claude-sonnet
+    config:
+      temperature: 0
+      max_tokens: 16384
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+outputPath:
+  - .promptfoo/output.json
+  - .promptfoo/output.csv
+
+# ---------------------------------------------------------------------------
+# Default test configuration
+# ---------------------------------------------------------------------------
+defaultTest:
+  options:
+    timeout: 300000
+    transform: output.trim()
+
+  metadata:
+    plugin: ai-readiness
+    suite: null
+    evalDate: "{{date}}"
+
+  vars:
+    evalInfraRoot: ../../eval-infra
+    graderLibRoot: ../../eval-infra/grader-lib
+    rubricRoot: ../../eval-infra/rubric-templates
+    pluginRoot: ../../plugins/ai-readiness
+    fixtureRoot: ./fixtures
+    graderRoot: ./graders
+    referenceRoot: ./reference-solutions
+    sourcePromptRoot: ./source-prompts
+
+  assert:
+    - type: javascript
+      value: output.length > 0
+      metric: non_empty_output
+      weight: 0
+
+# ---------------------------------------------------------------------------
+# Evaluation settings
+# ---------------------------------------------------------------------------
+evaluateOptions:
+  maxConcurrency: 2
+  showProgressBar: true
+
+# ---------------------------------------------------------------------------
+# Test suites
+# ---------------------------------------------------------------------------
+tests:
+  # Positive suites
+  - file://suites/full-audit.yaml
+  - file://suites/git-health.yaml
+  - file://suites/code-review.yaml
+  - file://suites/architecture.yaml
+  - file://suites/security.yaml
+  - file://suites/testing.yaml
+  - file://suites/api-review.yaml
+
+  # Negative suites
+  - file://suites/full-audit-neg.yaml
+  - file://suites/git-health-neg.yaml
+  - file://suites/code-review-neg.yaml
+  - file://suites/architecture-neg.yaml
+  - file://suites/security-neg.yaml
+  - file://suites/testing-neg.yaml
+  - file://suites/api-review-neg.yaml

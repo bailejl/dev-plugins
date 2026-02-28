@@ -1,0 +1,256 @@
+# suites/scaffolding-neg.yaml
+# Negative eval cases for /frontend-dev:scaffold-component
+# Tests that the agent does NOT over-engineer scaffolded components.
+
+- description: "NEG: Simple component should not include unnecessary abstractions"
+  metadata:
+    suite: scaffolding-neg
+    case: no-overengineering-simple
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      {% raw %}
+      The working directory contains a React + Vite project with the following files:
+
+      `package.json`:
+      ```json
+      {
+        "name": "base-app",
+        "private": true,
+        "version": "0.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext .js,.jsx",
+          "test": "vitest run"
+        },
+        "dependencies": {
+          "react": "^18.3.1",
+          "react-dom": "^18.3.1"
+        },
+        "devDependencies": {
+          "@testing-library/jest-dom": "^6.4.2",
+          "@testing-library/react": "^14.2.1",
+          "@testing-library/user-event": "^14.5.2",
+          "@types/react": "^18.3.1",
+          "@types/react-dom": "^18.3.0",
+          "@vitejs/plugin-react": "^4.2.1",
+          "eslint": "^8.57.0",
+          "eslint-plugin-react": "^7.34.0",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "jsdom": "^24.0.0",
+          "vite": "^5.2.8",
+          "vitest": "^1.4.0"
+        }
+      }
+      ```
+
+      `vite.config.js`:
+      ```js
+      import { defineConfig } from 'vite';
+      import react from '@vitejs/plugin-react';
+
+      export default defineConfig({
+        plugins: [react()],
+        test: {
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: [],
+        },
+      });
+      ```
+
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+
+      `src/main.jsx`:
+      ```jsx
+      import React from 'react';
+      import ReactDOM from 'react-dom/client';
+      import App from './App';
+
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>,
+      );
+      ```
+      {% endraw %}
+
+      Run /frontend-dev:scaffold-component to create a simple Badge component.
+      It just needs a label prop (string) and an optional color prop.
+      Place it in src/components/Badge/.
+  assert:
+    # Should NOT have factory patterns, HOCs, or excessive abstractions
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasFactory = /factory|Factory|createBadge|withBadge/.test(text);
+        const hasHOC = /withBadge|HOC|hoc|WrappedComponent/.test(text);
+        const hasContext = /createContext|useContext|BadgeContext/.test(text);
+        const hasReducer = /useReducer/.test(text);
+        return !hasFactory && !hasHOC && !hasContext && !hasReducer;
+      metric: no_overengineering
+      weight: 3
+
+    # Should be concise — a simple Badge should not be 200+ lines
+    - type: javascript
+      value: |
+        const text = output || '';
+        const codeBlocks = text.match(/```(?:tsx|jsx|typescript)?\n([\s\S]*?)```/g) || [];
+        if (codeBlocks.length === 0) return false;
+        const mainBlock = codeBlocks.find(b => /Badge/.test(b)) || codeBlocks[0];
+        const lineCount = mainBlock.split('\n').length;
+        return lineCount < 80;
+      metric: conciseness
+      weight: 2
+
+    - type: llm-rubric
+      value: |
+        Evaluate the Badge component. It was asked to be a simple component with a
+        label (string) and optional color prop. It should be SHORT and SIMPLE.
+        Penalize: factories, HOCs, context providers, useReducer, complex type
+        hierarchies, unnecessary memoization, or more than 2 files beyond the
+        component itself.
+      metric: overengineering_check
+      weight: 3
+
+- description: "NEG: Should not add unrequested features to a simple component"
+  metadata:
+    suite: scaffolding-neg
+    case: no-unrequested-features
+  vars:
+    fixture: "{{fixtureRoot}}/base-app"
+    prompt: |
+      {% raw %}
+      The working directory contains a React + Vite project with the following files:
+
+      `package.json`:
+      ```json
+      {
+        "name": "base-app",
+        "private": true,
+        "version": "0.0.0",
+        "type": "module",
+        "scripts": {
+          "dev": "vite",
+          "build": "vite build",
+          "preview": "vite preview",
+          "lint": "eslint src --ext .js,.jsx",
+          "test": "vitest run"
+        },
+        "dependencies": {
+          "react": "^18.3.1",
+          "react-dom": "^18.3.1"
+        },
+        "devDependencies": {
+          "@testing-library/jest-dom": "^6.4.2",
+          "@testing-library/react": "^14.2.1",
+          "@testing-library/user-event": "^14.5.2",
+          "@types/react": "^18.3.1",
+          "@types/react-dom": "^18.3.0",
+          "@vitejs/plugin-react": "^4.2.1",
+          "eslint": "^8.57.0",
+          "eslint-plugin-react": "^7.34.0",
+          "eslint-plugin-react-hooks": "^4.6.0",
+          "jsdom": "^24.0.0",
+          "vite": "^5.2.8",
+          "vitest": "^1.4.0"
+        }
+      }
+      ```
+
+      `vite.config.js`:
+      ```js
+      import { defineConfig } from 'vite';
+      import react from '@vitejs/plugin-react';
+
+      export default defineConfig({
+        plugins: [react()],
+        test: {
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: [],
+        },
+      });
+      ```
+
+      `src/App.jsx`:
+      ```jsx
+      import { useState } from 'react';
+
+      function App() {
+        const [count, setCount] = useState(0);
+
+        return (
+          <div>
+            <h1>Base App</h1>
+            <p>A minimal React app for eval fixtures.</p>
+            <button onClick={() => setCount(c => c + 1)}>
+              Count: {count}
+            </button>
+          </div>
+        );
+      }
+
+      export default App;
+      ```
+
+      `src/main.jsx`:
+      ```jsx
+      import React from 'react';
+      import ReactDOM from 'react-dom/client';
+      import App from './App';
+
+      ReactDOM.createRoot(document.getElementById('root')).render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>,
+      );
+      ```
+      {% endraw %}
+
+      Run /frontend-dev:scaffold-component to create a Divider component.
+      It is a horizontal line separator. No props needed beyond className.
+      Place it in src/components/Divider/.
+  assert:
+    - type: javascript
+      value: |
+        const text = output || '';
+        const hasAnimation = /animation|transition|keyframe/i.test(text);
+        const hasTheme = /ThemeProvider|useTheme|createTheme/i.test(text);
+        const codeBlocks = text.match(/```(?:tsx|jsx|typescript)?\n([\s\S]*?)```/g) || [];
+        const mainBlock = codeBlocks.find(b => /Divider/.test(b)) || codeBlocks[0] || '';
+        const lineCount = mainBlock.split('\n').length;
+        return !hasAnimation && !hasTheme && lineCount < 50;
+      metric: scope_discipline
+      weight: 3
+
+    - type: llm-rubric
+      value: |
+        A Divider component was requested — a simple horizontal line with only a
+        className prop. Evaluate whether the agent produced exactly this, without
+        adding orientation switching, animation, complex theming, spacing
+        calculations, or other unrequested features.
+      metric: instruction_following
+      weight: 2

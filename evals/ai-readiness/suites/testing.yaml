@@ -1,0 +1,225 @@
+# suites/testing.yaml
+# Positive eval cases for /ai-readiness:testing
+# Tests that the agent identifies testing anti-patterns.
+
+- description: "Testing review on untested-repo should find anti-patterns"
+  metadata:
+    suite: testing
+    case: untested-repo-positive
+  vars:
+    fixture: "{{fixtureRoot}}/untested-repo"
+    prompt: |
+      Run /ai-readiness:testing on the following repository files.
+      Evaluate test quality: coverage, assertion quality, edge cases,
+      naming conventions, and testing patterns.
+      Produce a testing review report.
+
+      {% raw %}
+      `src/calculator.js`:
+      ```js
+      'use strict';
+
+      function add(a, b) {
+        return a + b;
+      }
+
+      function subtract(a, b) {
+        return a - b;
+      }
+
+      function multiply(a, b) {
+        return a * b;
+      }
+
+      function divide(a, b) {
+        if (b === 0) throw new Error('Division by zero');
+        return a / b;
+      }
+
+      function factorial(n) {
+        if (n < 0) throw new Error('Negative factorial');
+        if (n === 0 || n === 1) return 1;
+        let result = 1;
+        for (let i = 2; i <= n; i++) {
+          result *= i;
+        }
+        return result;
+      }
+
+      function power(base, exponent) {
+        return Math.pow(base, exponent);
+      }
+
+      function percentage(value, total) {
+        if (total === 0) throw new Error('Total cannot be zero');
+        return (value / total) * 100;
+      }
+
+      module.exports = { add, subtract, multiply, divide, factorial, power, percentage };
+      ```
+
+      `src/validator.js`:
+      ```js
+      'use strict';
+
+      function isValidEmail(email) {
+        if (typeof email !== 'string') return false;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      }
+
+      function isValidPhone(phone) {
+        if (typeof phone !== 'string') return false;
+        const digits = phone.replace(/[\s\-\(\)\.]/g, '');
+        return /^\+?\d{10,15}$/.test(digits);
+      }
+
+      function isValidUrl(url) {
+        if (typeof url !== 'string') return false;
+        try {
+          new URL(url);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      function isValidAge(age) {
+        if (typeof age !== 'number') return false;
+        return Number.isInteger(age) && age >= 0 && age <= 150;
+      }
+
+      function isValidUsername(username) {
+        if (typeof username !== 'string') return false;
+        return /^[a-zA-Z0-9_]{3,20}$/.test(username);
+      }
+
+      module.exports = { isValidEmail, isValidPhone, isValidUrl, isValidAge, isValidUsername };
+      ```
+
+      `tests/calculator.test.js`:
+      ```js
+      'use strict';
+
+      const { add, subtract, multiply } = require('../src/calculator');
+
+      // Tautological tests, generic names, no edge cases
+
+      test('test1', () => {
+        expect(true).toBe(true);
+      });
+
+      test('test2', () => {
+        const result = add(1, 2);
+        expect(result).toBeTruthy();
+      });
+
+      test('test3', () => {
+        expect(true).toBe(true);
+        expect(1).toBe(1);
+      });
+
+      test('addition works', () => {
+        // Tests the mock, not the actual function
+        const mockAdd = jest.fn().mockReturnValue(5);
+        expect(mockAdd(2, 3)).toBe(5);
+        expect(mockAdd).toHaveBeenCalledWith(2, 3);
+      });
+
+      test('subtraction', () => {
+        // Only tests one case
+        expect(subtract(5, 3)).toBe(2);
+      });
+
+      test('multiply', () => {
+        // Only positive integers, no edge cases
+        expect(multiply(2, 3)).toBe(6);
+      });
+
+      test('calculator test', () => {
+        // Vague test name, tests multiple things poorly
+        expect(add(1, 1)).toBe(2);
+        expect(typeof add).toBe('function');
+      });
+
+      // No tests for:
+      // - divide (especially division by zero)
+      // - factorial (negative numbers, zero, large numbers)
+      // - power
+      // - percentage
+      // - Negative numbers
+      // - Floating point edge cases
+      // - Type coercion issues
+      // - Very large numbers / overflow
+      ```
+
+      `tests/validator.test.js`:
+      ```js
+      'use strict';
+
+      const { isValidEmail, isValidPhone, isValidUrl } = require('../src/validator');
+
+      // Only happy path tests, no edge cases or error scenarios
+
+      test('valid email', () => {
+        expect(isValidEmail('user@example.com')).toBe(true);
+      });
+
+      test('valid phone', () => {
+        expect(isValidPhone('1234567890')).toBe(true);
+      });
+
+      test('valid url', () => {
+        expect(isValidUrl('https://example.com')).toBe(true);
+      });
+
+      // Missing tests:
+      // - null / undefined inputs
+      // - Empty strings
+      // - Invalid emails (no @, no domain, spaces, multiple @)
+      // - International phone formats
+      // - Edge case URLs (no protocol, just domain, IP addresses)
+      // - isValidAge (not tested at all)
+      // - isValidUsername (not tested at all)
+      // - Boundary values (age: -1, 0, 150, 151)
+      // - Type coercion (passing numbers where strings expected)
+      // - SQL injection / XSS in inputs
+      // - Unicode / special characters
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: evidence cited
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 3
+
+    # LLM rubric: finding quality
+    - type: llm-rubric
+      value: |
+        Evaluate the testing review. The untested-repo has these issues:
+        - Tautological tests: expect(true).toBe(true) in calculator.test.js
+        - Tests that test mocks instead of real behavior
+        - Generic test names: "test1", "test2" (not descriptive)
+        - Missing edge cases: no division by zero, no negative numbers
+        - No null/undefined tests for validator functions
+        - No boundary value tests
+        - Only happy path coverage for validation
+        The report should identify these specific issues.
+      metric: finding_quality
+      weight: 3
+
+    # LLM rubric: coaching quality
+    - type: llm-rubric
+      value: |
+        Evaluate the testing recommendations.
+        Good recommendations should show concrete examples of
+        better test cases, proper assertion patterns, and
+        specific edge cases to add.
+      metric: coaching_quality
+      weight: 2
+
+    # Transcript: evidence gathering
+    - type: javascript
+      value: file://./graders/transcript/evidence-gathering.js
+      metric: evidence_gathering
+      weight: 2

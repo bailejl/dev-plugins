@@ -1,0 +1,293 @@
+# suites/security.yaml
+# Positive eval cases for /ai-readiness:security
+# Tests that the agent identifies critical security vulnerabilities.
+
+- description: "Security scan on insecure-repo should find critical vulnerabilities"
+  metadata:
+    suite: security
+    case: insecure-repo-positive
+  vars:
+    fixture: "{{fixtureRoot}}/insecure-repo"
+    expectedFindings:
+      - pattern: "hardcoded.*secret|secret.*hardcoded|API.KEY|JWT.*secret"
+        severity: critical
+      - pattern: "SQL.*injection|injection.*SQL|string.*concatenat"
+        severity: critical
+      - pattern: "MD5|password.*hash|weak.*hash"
+        severity: critical
+      - pattern: "missing.*auth|auth.*middleware|admin.*unprotected"
+        severity: major
+      - pattern: "CORS.*\\*|wildcard.*CORS"
+        severity: major
+      - pattern: ".env.*commit|commit.*\\.env|credential.*commit"
+        severity: critical
+      - pattern: "stack.*trace|error.*expos|verbose.*error"
+        severity: minor
+    prompt: |
+      Run /ai-readiness:security on the following repository files.
+      Scan for security vulnerabilities: hardcoded secrets, injection flaws,
+      authentication issues, and configuration problems.
+      Produce a security findings report with severity ratings.
+
+      {% raw %}
+      `.env`:
+      ```
+      # Database configuration
+      DATABASE_URL=postgres://admin:password123@prod-db.internal:5432/myapp
+      REDIS_URL=redis://:secretpass@cache.internal:6379
+
+      # API Keys
+      API_KEY=sk-live-abc123def456ghi789
+      STRIPE_SECRET_KEY=sk_live_4eC39HqLyjWDarjtT1zdp7dc
+      SENDGRID_API_KEY=SG.abc123.xyz789
+
+      # JWT
+      JWT_SECRET=my-super-secret-jwt-key-do-not-share
+
+      # AWS
+      AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+      AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      ```
+
+      `src/api.js`:
+      ```js
+      'use strict';
+
+      /**
+       * API routes — multiple security issues:
+       * - Missing auth middleware on admin routes
+       * - CORS set to wildcard
+       * - Verbose error messages exposing stack traces
+       */
+
+      // CORS configuration — allows all origins
+      const corsOptions = {
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['*'],
+        credentials: true, // Dangerous with origin: '*'
+      };
+
+      function setupRoutes(app) {
+        // Public routes
+        app.get('/api/health', (req, res) => {
+          res.json({ status: 'ok' });
+        });
+
+        app.post('/api/login', (req, res) => {
+          // Login handler
+          res.json({ token: 'xxx' });
+        });
+
+        // Admin routes — NO AUTH MIDDLEWARE
+        // These should require authentication and admin role
+        app.get('/api/admin/users', (req, res) => {
+          res.json({ users: [] });
+        });
+
+        app.delete('/api/admin/users/:id', (req, res) => {
+          res.json({ deleted: true });
+        });
+
+        app.post('/api/admin/reset-database', (req, res) => {
+          // Extremely dangerous endpoint with no auth
+          res.json({ reset: true });
+        });
+
+        app.get('/api/admin/config', (req, res) => {
+          // Exposes internal configuration
+          res.json({
+            dbHost: process.env.DATABASE_URL,
+            apiKey: process.env.API_KEY,
+            env: process.env.NODE_ENV,
+            version: process.version,
+          });
+        });
+
+        // Error handler that leaks stack traces
+        app.use((err, req, res, next) => {
+          console.error(err);
+          res.status(500).json({
+            error: err.message,
+            stack: err.stack, // Never expose stack traces in production!
+            code: err.code,
+            details: {
+              path: req.path,
+              method: req.method,
+              query: req.query,
+              body: req.body, // Echoing back request body is dangerous
+              headers: req.headers, // Exposing all headers including auth
+            },
+          });
+        });
+      }
+
+      module.exports = { setupRoutes, corsOptions };
+      ```
+
+      `src/auth.js`:
+      ```js
+      'use strict';
+
+      const crypto = require('crypto');
+
+      // Hardcoded JWT secret — should be in environment variable
+      const JWT_SECRET = 'my-super-secret-jwt-key-do-not-share';
+      const TOKEN_EXPIRY = '7d';
+
+      /**
+       * Hash a password using MD5.
+       * NOTE: MD5 is fast and unsuitable for password hashing.
+       * Should use bcrypt, scrypt, or argon2.
+       */
+      function hashPassword(password) {
+        return crypto.createHash('md5').update(password).digest('hex');
+      }
+
+      function verifyPassword(password, hash) {
+        return hashPassword(password) === hash;
+      }
+
+      /**
+       * Generate a JWT token (simplified simulation).
+       * Uses hardcoded secret instead of env var.
+       */
+      function generateToken(user) {
+        const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64');
+        const payload = Buffer.from(JSON.stringify({
+          sub: user.id,
+          email: user.email,
+          role: user.role,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+        })).toString('base64');
+
+        const signature = crypto
+          .createHmac('sha256', JWT_SECRET)
+          .update(`${header}.${payload}`)
+          .digest('base64');
+
+        return `${header}.${payload}.${signature}`;
+      }
+
+      /**
+       * Login handler — no rate limiting, no account lockout.
+       */
+      function login(email, password, users) {
+        const user = users.find(u => u.email === email);
+        if (!user) {
+          return { error: 'Invalid credentials' };
+        }
+
+        if (!verifyPassword(password, user.passwordHash)) {
+          // No failed attempt tracking or rate limiting
+          return { error: 'Invalid credentials' };
+        }
+
+        const token = generateToken(user);
+        return { token, user: { id: user.id, email: user.email, role: user.role } };
+      }
+
+      module.exports = { hashPassword, verifyPassword, generateToken, login, JWT_SECRET };
+      ```
+
+      `src/db.js`:
+      ```js
+      'use strict';
+
+      /**
+       * Database query module.
+       * WARNING: Contains SQL injection vulnerabilities.
+       */
+
+      // Simulated database connection
+      const db = {
+        query: function(sql) {
+          console.log('Executing SQL:', sql);
+          return [];
+        }
+      };
+
+      /**
+       * Get a user by ID — SQL INJECTION via string concatenation.
+       * Should use parameterized queries.
+       */
+      function getUserById(req) {
+        const sql = `SELECT * FROM users WHERE id = ${req.params.id}`;
+        return db.query(sql);
+      }
+
+      /**
+       * Search users — SQL INJECTION via string concatenation.
+       */
+      function searchUsers(req) {
+        const sql = `SELECT * FROM users WHERE name LIKE '%${req.query.search}%' ORDER BY ${req.query.sort || 'name'}`;
+        return db.query(sql);
+      }
+
+      /**
+       * Delete a user — SQL INJECTION.
+       */
+      function deleteUser(req) {
+        const sql = `DELETE FROM users WHERE id = ${req.params.id} AND org_id = ${req.params.orgId}`;
+        return db.query(sql);
+      }
+
+      /**
+       * Update user profile — SQL INJECTION via string interpolation.
+       */
+      function updateUserProfile(req) {
+        const { name, email, bio } = req.body;
+        const sql = `UPDATE users SET name = '${name}', email = '${email}', bio = '${bio}' WHERE id = ${req.params.id}`;
+        return db.query(sql);
+      }
+
+      /**
+       * Raw query endpoint — executes arbitrary SQL.
+       */
+      function rawQuery(req) {
+        return db.query(req.body.sql);
+      }
+
+      module.exports = { getUserById, searchUsers, deleteUser, updateUserProfile, rawQuery };
+      ```
+      {% endraw %}
+  assert:
+    # Deterministic: severity accuracy
+    - type: javascript
+      value: file://./graders/deterministic/severity-accuracy.js
+      metric: severity_accuracy
+      weight: 3
+
+    # Deterministic: evidence cited
+    - type: javascript
+      value: file://./graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 3
+
+    # LLM rubric: false negative
+    - type: llm-rubric
+      value: |
+        This repository contains 7 planted security vulnerabilities:
+        1. Committed .env with DATABASE_URL (admin:password123) and API_KEY (sk-live-abc123)
+        2. Hardcoded JWT secret in auth.js
+        3. MD5 for password hashing (should be bcrypt/argon2)
+        4. SQL injection via `SELECT * FROM users WHERE id = ${req.params.id}`
+        5. No auth middleware on admin routes
+        6. CORS set to * (wildcard)
+        7. Stack traces exposed in error responses
+        The scan should auto-fail this repository. How many issues were found?
+      metric: false_negative_rate
+      weight: 3
+
+    # Auto-fail: output should indicate failure
+    - type: javascript
+      value: |
+        const failMatch = output.match(/\b(fail|auto.fail|critical|blocked)\b/i);
+        return {
+          pass: !!failMatch,
+          score: failMatch ? 1 : 0,
+          reason: failMatch ? 'Report correctly indicates failure/critical status' : 'Report should indicate auto-fail for critical security issues'
+        };
+      metric: auto_fail_triggered
+      weight: 2
