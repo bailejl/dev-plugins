@@ -11,6 +11,7 @@ Designed as a **reference implementation** demonstrating how to build scalable p
 React component scaffolding, accessibility audits, responsive design checks, component refactoring, and design system compliance.
 
 **Commands:**
+
 - `/frontend-dev:scaffold-component` — Scaffold a React component with props, types, tests, and story
 - `/frontend-dev:a11y-audit` — WCAG 2.1 AA compliance audit using axe-core patterns
 - `/frontend-dev:responsive-check` — Responsive design audit (media queries, viewport, touch targets)
@@ -22,6 +23,7 @@ React component scaffolding, accessibility audits, responsive design checks, com
 Assess a repository and its git history for AI-coding assistant readiness — comprehensive audits covering code quality, security, testing, architecture, git health, and API design.
 
 **Commands:**
+
 - `/ai-readiness:full-audit` — 10-section comprehensive AI readiness audit
 - `/ai-readiness:git-health` — 71 git anti-patterns with DORA-based severity scoring
 - `/ai-readiness:code-review` — 7-category weighted code review and static analysis
@@ -32,7 +34,7 @@ Assess a repository and its git history for AI-coding assistant readiness — co
 
 ## Project Structure
 
-```
+```text
 dev-plugins/
 ├── plugins/           # What ships to users (commands, skills, agents, hooks)
 │   ├── frontend-dev/
@@ -59,13 +61,14 @@ export ANTHROPIC_API_KEY=your-key-here
 echo "ANTHROPIC_API_KEY=your-key-here" > .env
 ```
 
-# Run evals for a specific plugin
+### Run evals for a specific plugin
+
 npm run eval:frontend
 npm run eval:readiness
 
-# Run all evals
+### Run all evals
+
 npm run eval:all
-```
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed setup instructions.
 
