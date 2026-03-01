@@ -30,14 +30,17 @@ This installs the shared dev dependencies: promptfoo, eslint, prettier, axe-core
 Evals use [promptfoo](https://promptfoo.dev) to call the Anthropic API directly. You need an `ANTHROPIC_API_KEY` environment variable set before running evals.
 
 ```bash
-# Option 1: Export in your shell
-export ANTHROPIC_API_KEY=your-key-here
+# Option 1: Copy the template and fill in your key
+cp .env.example .env
+# Then edit .env with your real key
 
-# Option 2: Add to a .env file (gitignored)
-echo "ANTHROPIC_API_KEY=your-key-here" > .env
+# Option 2: Export in your shell
+export ANTHROPIC_API_KEY=your-key-here
 ```
 
 You can get an API key from [console.anthropic.com](https://console.anthropic.com/).
+
+The `.env` file is gitignored. You can place it at the repo root (used by `npm run eval:*` scripts) or in a specific eval directory (e.g., `evals/ai-readiness/.env`) for direct `npx promptfoo eval` runs — the eval script checks both locations.
 
 > **Note:** The plugins themselves run inside Claude Code and use your Claude Code subscription — no API key needed. The API key is only required for the eval harness, which calls the Anthropic API through promptfoo to test plugin commands.
 

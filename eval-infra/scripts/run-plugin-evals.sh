@@ -118,9 +118,11 @@ fi
 
 cd "$PLUGIN_EVAL_DIR"
 
-# Auto-load .env from repo root if it exists
+# Auto-load .env: prefer plugin eval dir, fall back to repo root
 ENV_ARGS=""
-if [[ -f "$REPO_ROOT/.env" ]]; then
+if [[ -f "$PLUGIN_EVAL_DIR/.env" ]]; then
+  ENV_ARGS="--env-file $PLUGIN_EVAL_DIR/.env"
+elif [[ -f "$REPO_ROOT/.env" ]]; then
   ENV_ARGS="--env-file $REPO_ROOT/.env"
 fi
 
