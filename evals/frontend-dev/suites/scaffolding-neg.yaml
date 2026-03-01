@@ -7,6 +7,7 @@
     suite: scaffolding-neg
     case: no-overengineering-simple
     evalType: regression
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -153,6 +154,7 @@
     suite: scaffolding-neg
     case: no-unrequested-features
     evalType: regression
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |

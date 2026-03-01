@@ -1,0 +1,10 @@
+# Eval infrastructure
+/eval-infra/                    @bailejl
+/evals/                         @bailejl
+
+# Plugin-specific evals
+/evals/ai-readiness/            @bailejl
+/evals/frontend-dev/            @bailejl
+
+# Docs
+/docs/EVAL_PHILOSOPHY.md        @bailejl

@@ -8,6 +8,7 @@
     suite: full-audit
     case: messy-repo-positive
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/messy-repo"
     expectedFindings:
@@ -485,6 +486,7 @@
     suite: full-audit
     case: insecure-repo-positive
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/insecure-repo"
     expectedFindings:

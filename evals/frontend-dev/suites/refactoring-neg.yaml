@@ -7,6 +7,7 @@
     suite: refactoring-neg
     case: no-refactor-clean-component
     evalType: regression
+    source: ai-generated
   vars:
     prompt: |
       Run /frontend-dev:refactor on this component:
@@ -64,6 +65,7 @@
     suite: refactoring-neg
     case: preserve-behavior
     evalType: regression
+    source: ai-generated
   vars:
     prompt: |
       Run /frontend-dev:refactor on this component:

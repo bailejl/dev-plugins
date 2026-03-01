@@ -7,6 +7,7 @@
     suite: responsive
     case: desktop-grid-audit
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/responsive-broken"
     prompt: |
@@ -165,6 +166,7 @@
     suite: responsive
     case: base-app-responsive
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |

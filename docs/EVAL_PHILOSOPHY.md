@@ -137,3 +137,119 @@ See [Grader Guide](GRADER_GUIDE.md) for implementation details.
 **Fixture monoculture** — testing only one kind of input. Vary project size, language, framework, and messiness level.
 
 **Ignoring transcripts** — pass/fail tells you what happened. Transcripts tell you why. Read them.
+
+## Case Sourcing
+
+Every eval case must declare its origin via `source` in the metadata block. This enables tracking where cases come from and measuring how well the eval suite reflects real-world usage.
+
+### Accepted `source` values
+
+| Value | Meaning |
+|-------|---------|
+| `ai-generated` | Case was created by an AI (Claude) during initial eval development |
+| `production-failure` | Case reproduces a real bug, false positive, or false negative observed in production usage |
+| `user-report` | Case based on a user-reported issue or feedback |
+| `manual` | Case manually authored by a human developer |
+
+### Current status
+
+All existing eval cases are `source: ai-generated`. This is a known gap — the suite does not yet include cases sourced from real user behavior.
+
+### Adding real-world cases
+
+When a plugin produces an incorrect result in real usage (false positive, false negative, missed finding, or hallucinated finding):
+
+1. Create a new eval case in the appropriate suite file under `evals/<plugin>/suites/`
+2. Set `source: "production-failure"` (or `user-report` if from feedback)
+3. Add a `sourceNotes` field describing the original incident:
+   ```yaml
+   metadata:
+     suite: code-review
+     case: missed-xss-in-template
+     evalType: capability
+     source: production-failure
+     sourceNotes: "Plugin missed XSS vulnerability in Handlebars template during audit of project-X on 2025-01-15"
+   ```
+4. Use the real (or minimally anonymized) code as the fixture
+5. Write graders that assert the correct behavior
+
+Production-sourced cases are the highest-value additions to the eval suite.
+
+## Contributing Evals
+
+### Adding a new eval suite
+
+1. Create a YAML file in `evals/<plugin>/suites/<suite-name>.yaml`
+2. Each test case must include these metadata fields:
+   ```yaml
+   metadata:
+     suite: <suite-name>        # matches the filename
+     case: <case-name>          # unique identifier within the suite
+     evalType: capability       # or "regression"
+     source: ai-generated       # see Case Sourcing section for values
+   ```
+3. Define `vars` with a `fixture` path and `prompt`
+4. Add `assert` blocks with graders (see below)
+5. Create a corresponding negative suite (`<suite-name>-neg.yaml`) to test for false positives
+
+### Adding a new grader
+
+Three grader types are available:
+
+**Deterministic graders** — JavaScript functions that check output for specific patterns:
+```yaml
+- type: javascript
+  value: |
+    const text = output || '';
+    return /expected-pattern/.test(text);
+  metric: my_metric
+  weight: 2
+```
+
+**Transcript graders** — check the agent's process (tool usage, file reads, turn count):
+```yaml
+- type: javascript
+  value: file://./graders/transcript/evidence-gathering.js
+  metric: evidence_gathering
+  weight: 2
+```
+
+**LLM rubric graders** — use an LLM judge to assess output quality:
+```yaml
+- type: llm-rubric
+  value: |
+    Evaluate the report for completeness and accuracy...
+  metric: report_quality
+  weight: 3
+```
+
+Place reusable grader scripts in `evals/<plugin>/graders/` organized by type (`deterministic/`, `transcript/`, `llm-rubrics/`).
+
+### Required metadata fields
+
+Every test case **must** have:
+- `suite` — name matching the YAML filename
+- `case` — unique case identifier
+- `evalType` — `capability` (positive tests) or `regression` (negative tests)
+- `source` — origin of the test case (see Case Sourcing above)
+
+### Validation
+
+Validate your plugin's eval structure before submitting:
+
+```bash
+./eval-infra/scripts/validate-plugin.sh <plugin>
+```
+
+This checks for required files, metadata fields, grader references, and fixture paths.
+
+### Recording baselines
+
+After running evals, record the results as the new baseline:
+
+```bash
+npm run eval:all
+./eval-infra/scripts/record-baseline.sh <plugin>
+```
+
+This updates `BASELINE.md` and appends a timestamped entry to `evals/<plugin>/eval-history.jsonl`.

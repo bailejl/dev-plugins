@@ -7,6 +7,7 @@
     suite: design-system
     case: hardcoded-card
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/design-system"
     prompt: |

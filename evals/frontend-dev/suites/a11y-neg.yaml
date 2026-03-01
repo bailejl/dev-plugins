@@ -7,6 +7,7 @@
     suite: a11y-neg
     case: no-false-positive-decorative-img
     evalType: regression
+    source: ai-generated
   vars:
     prompt: |
       Run /frontend-dev:a11y-audit on this component:
@@ -70,6 +71,7 @@
     suite: a11y-neg
     case: no-false-positive-accessible-form
     evalType: regression
+    source: ai-generated
   vars:
     prompt: |
       Run /frontend-dev:a11y-audit on this component:

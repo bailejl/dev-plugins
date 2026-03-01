@@ -8,6 +8,7 @@
     suite: scaffolding
     case: basic-button-ts
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -134,6 +135,7 @@
     suite: scaffolding
     case: modal-with-hooks
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -248,6 +250,7 @@
     suite: scaffolding
     case: form-component
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |

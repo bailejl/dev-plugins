@@ -7,6 +7,7 @@
     suite: api-review
     case: bad-api-repo-positive
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/bad-api-repo"
     expectedFindings:

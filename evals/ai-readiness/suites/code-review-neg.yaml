@@ -7,6 +7,7 @@
     suite: code-review-neg
     case: clean-repo-negative
     evalType: regression
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/clean-repo"
     prompt: |

@@ -7,6 +7,7 @@
     suite: code-review
     case: messy-repo-positive
     evalType: capability
+    source: ai-generated
   vars:
     fixture: "{{fixtureRoot}}/messy-repo"
     expectedFindings:
