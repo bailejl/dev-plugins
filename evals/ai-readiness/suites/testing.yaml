@@ -6,8 +6,16 @@
   metadata:
     suite: testing
     case: untested-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/untested-repo"
+    expectedFindings:
+      - pattern: "no.*test|missing.*test|untested"
+        severity: critical
+      - pattern: "weak.*assert|tautolog|always.*pass"
+        severity: high
+      - pattern: "coverage|uncovered"
+        severity: medium
     prompt: |
       Run /ai-readiness:testing on the following repository files.
       Evaluate test quality: coverage, assertion quality, edge cases,
@@ -217,6 +225,12 @@
         specific edge cases to add.
       metric: coaching_quality
       weight: 2
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Transcript: evidence gathering
     - type: javascript

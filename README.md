@@ -2,7 +2,37 @@
 
 A Claude Code plugin marketplace for development tooling — with built-in evaluation harnesses for each plugin.
 
-Designed as a **reference implementation** demonstrating how to build scalable plugin marketplaces with rigorous, eval-driven development practices.
+Designed as a **reference implementation** demonstrating how to build Claude Code plugins with rigorous, [eval-driven development](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
+
+<!-- CI badge placeholder -->
+<!-- ![Eval CI](https://github.com/<owner>/dev-plugins/actions/workflows/eval-ci.yaml/badge.svg) -->
+
+## Quick Demo
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Set your API key (used by eval harness)
+echo "ANTHROPIC_API_KEY=your-key-here" > .env
+
+# 3. Run evals for one plugin and view results
+npm run eval:readiness
+npx promptfoo view
+```
+
+## How Evals Work
+
+```text
+┌──────────┐    ┌───────────┐    ┌──────────────────┐    ┌─────────┐
+│   Task   │───▶│  Trial    │───▶│     Graders      │───▶│ Outcome │
+│ (test    │    │  (single  │    │ • deterministic  │    │ pass@k  │
+│  case in │    │  prompt-  │    │ • llm-rubric     │    │ pass^k  │
+│  suite)  │    │  foo run) │    │ • transcript     │    │ scores  │
+└──────────┘    └───────────┘    └──────────────────┘    └─────────┘
+```
+
+See [BASELINE.md](BASELINE.md) for current eval metrics and [docs/EVAL_TAXONOMY.md](docs/EVAL_TAXONOMY.md) for how our eval concepts map to the [Anthropic "Demystifying Evals" article](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents).
 
 ## Plugins
 
@@ -52,23 +82,30 @@ dev-plugins/
 # Install dependencies
 npm install
 
-# Set your Anthropic API key (required for running evals)
-```bash
-# Option 1: Export in your shell
-export ANTHROPIC_API_KEY=your-key-here
-
-# Option 2: Add to a .env file (gitignored)
+# Set your Anthropic API key in .env (gitignored)
 echo "ANTHROPIC_API_KEY=your-key-here" > .env
 ```
 
-### Run evals for a specific plugin
+### Run evals
 
+```bash
+# Single plugin
 npm run eval:frontend
 npm run eval:readiness
 
-### Run all evals
-
+# All plugins
 npm run eval:all
+```
+
+### View results
+
+```bash
+# Interactive web viewer
+npx promptfoo view
+
+# Compute pass@k metrics
+python eval-infra/scripts/compute-pass-at-k.py --results evals/ai-readiness/.promptfoo/output.json --k 1 3 5
+```
 
 See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed setup instructions.
 
@@ -81,6 +118,15 @@ See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed setup instru
 | Prettier | Code-based grading (format) |
 | axe-core | Accessibility assertion engine |
 | Vite | Test fixture builds (frontend-dev) |
+
+## Documentation
+
+- [Getting Started](docs/GETTING_STARTED.md) — Setup and first eval run
+- [Eval Philosophy](docs/EVAL_PHILOSOPHY.md) — Principles of eval-driven development
+- [Eval Taxonomy](docs/EVAL_TAXONOMY.md) — Maps Anthropic article concepts to this repo
+- [Writing Evals](docs/WRITING_EVALS.md) — How to write test suites
+- [Grader Guide](docs/GRADER_GUIDE.md) — Grader types and implementation patterns
+- [Adding a Plugin](docs/ADDING_A_PLUGIN.md) — Step-by-step guide for new plugins
 
 ## License
 

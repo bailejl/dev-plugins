@@ -220,10 +220,13 @@ Metrics:
     groups = extract_outcomes(results, args.group_by)
 
     if args.json:
-        output = {}
+        output: dict[str, Any] = {}
+
+        # Per-group metrics
+        group_list = []
         for group_name, counts in sorted(groups.items()):
             n, c = counts["n"], counts["c"]
-            output[group_name] = {
+            group_entry: dict[str, Any] = {
                 "n": n,
                 "c": c,
                 "metrics": {
@@ -231,6 +234,37 @@ Metrics:
                 }
                 | {f"pass^{k}": round(pass_power_k(n, c, k), 4) for k in args.k},
             }
+            # Include top-level pass@k for easy access
+            for k in args.k:
+                group_entry[f"pass@{k}"] = round(pass_at_k(n, c, k), 4)
+            output[group_name] = group_entry
+
+            # Also build the "groups" array entry with the group_by field
+            if args.group_by:
+                groups_entry = dict(group_entry)
+                groups_entry[args.group_by] = group_name
+                group_list.append(groups_entry)
+
+        # Add "groups" array when --group-by is used
+        if args.group_by and group_list:
+            output["groups"] = group_list
+
+        # Add totals
+        total_n = sum(g["n"] for g in groups.values())
+        total_c = sum(g["c"] for g in groups.values())
+        output["total"] = {
+            "n": total_n,
+            "c": total_c,
+            "metrics": {
+                f"pass@{k}": round(pass_at_k(total_n, total_c, k), 4)
+                for k in args.k
+            }
+            | {
+                f"pass^{k}": round(pass_power_k(total_n, total_c, k), 4)
+                for k in args.k
+            },
+        }
+
         json.dump(output, sys.stdout, indent=2)
         print()
     else:

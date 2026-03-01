@@ -92,3 +92,22 @@ weighted_total: <computed>/5
 pass: <true|false>
 reasoning: <1-2 sentence overall assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+> "The form needs better accessibility"
+
+No specific WCAG criteria, no code references, no concrete recommendations.
+
+### Score 3/5
+> "Missing label for email input in BadForm.jsx. Add aria-label or associate with htmlFor."
+
+Some specifics but missing impact assessment and WCAG success criterion reference.
+
+### Score 5/5
+> "WCAG 2.1 §1.3.1 (Level A): Email input at BadForm.jsx:23 lacks programmatic label. Add `<label htmlFor='email'>Email</label>` before the input. Impact: Screen readers cannot identify the field purpose."
+
+WCAG reference, file:line, concrete code fix, and impact explanation.

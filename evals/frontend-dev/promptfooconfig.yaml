@@ -52,9 +52,25 @@ defaultTest:
     referenceRoot: ./reference-solutions
 
   assert:
+    # Every test should produce non-empty output
     - type: javascript
       value: output.length > 0
       metric: non_empty_output
+      weight: 0
+    # Minimum output length — audits should produce substantial content
+    - type: javascript
+      value: output.length >= 500
+      metric: min_output_length
+      weight: 1
+    # Maximum output length — catch runaway generation
+    - type: javascript
+      value: output.length <= 50000
+      metric: max_output_length
+      weight: 1
+    # Balanced code fences — count of ``` should be even
+    - type: javascript
+      value: (output.match(/```/g) || []).length % 2 === 0
+      metric: valid_markdown_fences
       weight: 0
 
 # ---------------------------------------------------------------------------

@@ -6,8 +6,18 @@
   metadata:
     suite: code-review
     case: messy-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/messy-repo"
+    expectedFindings:
+      - pattern: "naming.*inconsisten|inconsistent.*naming"
+        severity: medium
+      - pattern: "duplicat|DRY"
+        severity: medium
+      - pattern: "dead.*code|unused|commented.*out"
+        severity: low
+      - pattern: "god.*class|UserManager.*too|monolith"
+        severity: high
     prompt: |
       Run /ai-readiness:code-review on the following repository files.
       Review the codebase for code quality: naming conventions, duplication,
@@ -458,6 +468,12 @@
         WHERE to extract duplicated logic, and HOW to refactor the god class.
       metric: coaching_quality
       weight: 2
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Transcript: should have read files before making claims
     - type: javascript

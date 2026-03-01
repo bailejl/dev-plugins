@@ -6,6 +6,7 @@
   metadata:
     suite: refactoring-neg
     case: no-refactor-clean-component
+    evalType: regression
   vars:
     prompt: |
       Run /frontend-dev:refactor on this component:
@@ -27,6 +28,18 @@
       ```
       {% endraw %}
   assert:
+    - type: not-icontains
+      value: "critical"
+      metric: no_false_critical
+      weight: 2
+
+    - type: javascript
+      value: |
+        const rewrites = (output.match(/rewrite|completely.*restructure|overhaul/gi) || []).length;
+        return { pass: rewrites === 0, score: rewrites === 0 ? 1 : 0, reason: `Found ${rewrites} unnecessary rewrite suggestions` };
+      metric: no_unnecessary_rewrites
+      weight: 1
+
     - type: llm-rubric
       value: |
         The Avatar component is simple, clean, and well-scoped (~10 lines).
@@ -50,6 +63,7 @@
   metadata:
     suite: refactoring-neg
     case: preserve-behavior
+    evalType: regression
   vars:
     prompt: |
       Run /frontend-dev:refactor on this component:
@@ -91,6 +105,18 @@
 
       Analyze and refactor if improvements exist.
   assert:
+    - type: not-icontains
+      value: "critical"
+      metric: no_false_critical
+      weight: 2
+
+    - type: javascript
+      value: |
+        const rewrites = (output.match(/rewrite|completely.*restructure|overhaul/gi) || []).length;
+        return { pass: rewrites === 0, score: rewrites === 0 ? 1 : 0, reason: `Found ${rewrites} unnecessary rewrite suggestions` };
+      metric: no_unnecessary_rewrites
+      weight: 1
+
     # The component's public API must remain the same
     - type: llm-rubric
       value: |

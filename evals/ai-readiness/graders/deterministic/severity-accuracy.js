@@ -10,6 +10,8 @@
  * @returns {{ pass: boolean, score: number, reason: string, falseDowngrades: string[] }}
  */
 
+const { extractFindings } = require("../../../../eval-infra/grader-lib/finding-parser");
+
 const SEVERITY_LEVELS = {
   critical: 4,
   high: 3,
@@ -30,11 +32,14 @@ function grade(output, context) {
   if (expectedFindings.length === 0) {
     return {
       pass: true,
-      score: 1,
-      reason: "No expected findings specified — skipping",
+      score: 0.5,
+      reason: "No expectedFindings configured — severity check skipped",
       falseDowngrades: [],
     };
   }
+
+  // Parse findings from the output using shared utility
+  const parsedFindings = extractFindings(output || "");
 
   const found = [];
   const notFound = [];

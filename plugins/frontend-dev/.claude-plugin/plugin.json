@@ -1,8 +1,16 @@
 {
   "name": "frontend-dev",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "React component scaffolding, a11y audits, responsive checks, refactoring, and design system compliance",
   "author": { "name": "Joe Bailey" },
   "license": "MIT",
-  "keywords": ["react", "frontend", "accessibility", "a11y", "responsive", "design-system", "scaffolding"]
+  "keywords": [
+    "react",
+    "frontend",
+    "accessibility",
+    "a11y",
+    "responsive",
+    "design-system",
+    "scaffolding"
+  ]
 }

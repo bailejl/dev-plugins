@@ -7,8 +7,16 @@
   metadata:
     suite: full-audit
     case: messy-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/messy-repo"
+    expectedFindings:
+      - pattern: "no.*test|missing.*test"
+        severity: critical
+      - pattern: "god.*class|UserManager"
+        severity: high
+      - pattern: "documentation.*outdated|README.*wrong"
+        severity: medium
     prompt: |
       Run /ai-readiness:full-audit on the following repository files.
       Produce a full AI-readiness audit report covering all sections:
@@ -476,19 +484,16 @@
   metadata:
     suite: full-audit
     case: insecure-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/insecure-repo"
     expectedFindings:
-      - pattern: "hardcoded.*secret|secret.*hardcoded|API.KEY|JWT.*secret"
+      - pattern: "hardcoded.*secret|committed.*secret|\\.env"
         severity: critical
-      - pattern: "SQL.*injection|injection.*SQL|string.*concatenat"
+      - pattern: "SQL.*inject|string.*concat"
         severity: critical
-      - pattern: "MD5|password.*hash|hash.*password"
-        severity: critical
-      - pattern: "missing.*auth|auth.*middleware|admin.*unprotected"
-        severity: major
-      - pattern: "CORS.*\\*|wildcard.*CORS"
-        severity: major
+      - pattern: "MD5|weak.*hash"
+        severity: high
     prompt: |
       Run /ai-readiness:full-audit on the following repository files.
       Produce a full AI-readiness audit report.

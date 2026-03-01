@@ -6,6 +6,7 @@
   metadata:
     suite: responsive
     case: desktop-grid-audit
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/responsive-broken"
     prompt: |
@@ -163,6 +164,7 @@
   metadata:
     suite: responsive
     case: base-app-responsive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |

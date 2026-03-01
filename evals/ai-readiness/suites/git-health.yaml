@@ -6,8 +6,16 @@
   metadata:
     suite: git-health
     case: bad-git-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/bad-git-repo"
+    expectedFindings:
+      - pattern: "WIP|wip.*commit|meaningless.*commit"
+        severity: high
+      - pattern: "stale.*branch|long.*lived"
+        severity: medium
+      - pattern: "large.*file|binary|\\.psd"
+        severity: medium
     prompt: |
       Run /ai-readiness:git-health on the following repository.
       Analyze git history, branching strategy, commit quality, and repository hygiene.
@@ -206,6 +214,12 @@
         How many did the report identify?
       metric: false_negative_rate
       weight: 3
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Transcript: agent should have used git commands
     - type: javascript

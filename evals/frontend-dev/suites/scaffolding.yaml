@@ -7,6 +7,7 @@
   metadata:
     suite: scaffolding
     case: basic-button-ts
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -124,14 +125,7 @@
 
     # LLM rubric: overall React quality
     - type: llm-rubric
-      value: |
-        Evaluate the scaffolded Button component for React quality.
-        The component should:
-        - Use TypeScript with a proper ButtonProps interface
-        - Have a variant prop with "primary" | "secondary" | "danger"
-        - Use semantic HTML (<button> element)
-        - Include basic accessibility (type="button" or appropriate aria attributes)
-        - Follow React conventions (PascalCase, proper exports)
+      value: file://graders/llm-rubrics/react-quality.md
       metric: react_quality
       weight: 2
 
@@ -139,6 +133,7 @@
   metadata:
     suite: scaffolding
     case: modal-with-hooks
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -244,14 +239,7 @@
       weight: 3
 
     - type: llm-rubric
-      value: |
-        Evaluate the Modal component API design:
-        - Does it accept isOpen and onClose props?
-        - Does it implement focus trapping?
-        - Does it handle Escape key to close?
-        - Does it use role="dialog" and aria-modal="true"?
-        - Does it render children content?
-        - Is the API clean and not over-engineered?
+      value: file://graders/llm-rubrics/component-api.md
       metric: component_api_quality
       weight: 2
 
@@ -259,6 +247,7 @@
   metadata:
     suite: scaffolding
     case: form-component
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -362,12 +351,6 @@
       weight: 3
 
     - type: llm-rubric
-      value: |
-        Evaluate the LoginForm component for accessibility:
-        - Do all inputs have associated labels?
-        - Are required fields marked?
-        - Is the form element used (not just a div)?
-        - Are autocomplete attributes present (email, current-password)?
-        - Is there an accessible submit button?
+      value: file://graders/llm-rubrics/a11y-review.md
       metric: form_a11y
       weight: 2

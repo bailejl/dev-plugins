@@ -92,3 +92,16 @@ weighted_total: <computed>/5
 pass: <true|false>
 reasoning: <1-2 sentence overall assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+Class component with no types, inline styles, no error boundaries, massive render method. Violates rules of hooks, mixes concerns throughout, no separation of logic and rendering.
+
+### Score 3/5
+Functional component with basic TypeScript, some prop types, but missing memoization for expensive computations, no error boundary. Adequate structure but room for improvement in patterns and types.
+
+### Score 5/5
+Well-typed functional component with proper hooks, React.memo where needed, clear prop interface extending HTML attributes, accessible by default, clean separation of concerns. Every line earns its place.

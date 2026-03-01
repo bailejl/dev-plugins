@@ -6,8 +6,18 @@
   metadata:
     suite: architecture
     case: spaghetti-arch-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/spaghetti-arch-repo"
+    expectedFindings:
+      - pattern: "god.*class|GodClass|single.*class.*too"
+        severity: critical
+      - pattern: "circular.*depend|moduleA.*moduleB|mutual"
+        severity: high
+      - pattern: "layer.*violat|controller.*direct"
+        severity: high
+      - pattern: "util.*dump|catch.*all|grab.*bag"
+        severity: medium
     prompt: |
       Run /ai-readiness:architecture on the following repository files.
       Analyze the codebase architecture: dependency structure, layering,
@@ -857,6 +867,12 @@
         - How to organize the utility functions by domain
       metric: coaching_quality
       weight: 2
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Transcript: evidence gathering
     - type: javascript

@@ -6,6 +6,7 @@
   metadata:
     suite: scaffolding-neg
     case: no-overengineering-simple
+    evalType: regression
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -125,6 +126,18 @@
       metric: conciseness
       weight: 2
 
+    - type: not-icontains
+      value: "abstract factory"
+      metric: no_over_engineering_patterns
+      weight: 1
+
+    - type: javascript
+      value: |
+        const fileRefs = (output.match(/\.(tsx?|jsx?|css|scss)\b/g) || []);
+        return { pass: fileRefs.length <= 10, score: fileRefs.length <= 10 ? 1 : 0.3, reason: `${fileRefs.length} file references (max 10 for simple component)` };
+      metric: file_count_bound
+      weight: 1
+
     - type: llm-rubric
       value: |
         Evaluate the Badge component. It was asked to be a simple component with a
@@ -139,6 +152,7 @@
   metadata:
     suite: scaffolding-neg
     case: no-unrequested-features
+    evalType: regression
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |
@@ -245,6 +259,18 @@
         return !hasAnimation && !hasTheme && lineCount < 50;
       metric: scope_discipline
       weight: 3
+
+    - type: not-icontains
+      value: "abstract factory"
+      metric: no_over_engineering_patterns
+      weight: 1
+
+    - type: javascript
+      value: |
+        const fileRefs = (output.match(/\.(tsx?|jsx?|css|scss)\b/g) || []);
+        return { pass: fileRefs.length <= 10, score: fileRefs.length <= 10 ? 1 : 0.3, reason: `${fileRefs.length} file references (max 10 for simple component)` };
+      metric: file_count_bound
+      weight: 1
 
     - type: llm-rubric
       value: |

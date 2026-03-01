@@ -6,6 +6,7 @@
   metadata:
     suite: refactoring
     case: decompose-monolith
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/messy-component"
     prompt: |
@@ -381,6 +382,7 @@
   metadata:
     suite: refactoring
     case: derived-state
+    evalType: capability
   vars:
     prompt: |
       Run /frontend-dev:refactor on this component:

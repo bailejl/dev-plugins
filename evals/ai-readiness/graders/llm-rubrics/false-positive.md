@@ -53,3 +53,16 @@ score: <1-5>
 pass: <true|false>
 reasoning: <1-2 sentence assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+Reports "SQL injection vulnerability" in code that uses parameterized queries; flags "hardcoded secret" for a public API base URL constant. Multiple phantom findings that don't exist in the code.
+
+### Score 3/5
+Mostly accurate findings, but flags a well-documented intentional `any` type as a type safety issue. One or two debatable items but majority of findings are legitimate.
+
+### Score 5/5
+Every finding verified against actual code; no phantom issues; correctly identifies that clean-repo has no critical issues. Zero noise in the report.

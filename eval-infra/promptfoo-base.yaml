@@ -1,7 +1,8 @@
 # eval-infra/promptfoo-base.yaml
-# Base promptfoo configuration for all plugin evals.
-# Plugin-specific configs extend this via:
-#   extends: ../../eval-infra/promptfoo-base.yaml
+# Reference base configuration for all plugin evals.
+# Plugin-specific configs replicate these defaults and add plugin-specific
+# overrides. Keep this file as the canonical source of shared settings —
+# when changing defaults, update both this file and each plugin config.
 
 # ---------------------------------------------------------------------------
 # Prompts — uses the per-test "prompt" variable from each suite
@@ -53,6 +54,21 @@ defaultTest:
     - type: javascript
       value: output.length > 0
       metric: non_empty_output
+      weight: 0
+    # Minimum output length — audits should produce substantial content
+    - type: javascript
+      value: output.length >= 500
+      metric: min_output_length
+      weight: 1
+    # Maximum output length — catch runaway generation
+    - type: javascript
+      value: output.length <= 50000
+      metric: max_output_length
+      weight: 1
+    # Balanced code fences — count of ``` should be even
+    - type: javascript
+      value: (output.match(/```/g) || []).length % 2 === 0
+      metric: valid_markdown_fences
       weight: 0
 
 # ---------------------------------------------------------------------------

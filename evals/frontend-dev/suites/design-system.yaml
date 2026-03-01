@@ -6,6 +6,7 @@
   metadata:
     suite: design-system
     case: hardcoded-card
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/design-system"
     prompt: |

@@ -6,6 +6,7 @@
   metadata:
     suite: a11y
     case: badform-audit
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/broken-a11y"
     prompt: |
@@ -156,6 +157,7 @@
   metadata:
     suite: a11y
     case: base-app-audit
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/base-app"
     prompt: |

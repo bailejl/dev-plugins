@@ -6,6 +6,7 @@
   metadata:
     suite: security
     case: insecure-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/insecure-repo"
     expectedFindings:
@@ -279,6 +280,12 @@
         The scan should auto-fail this repository. How many issues were found?
       metric: false_negative_rate
       weight: 3
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Auto-fail: output should indicate failure
     - type: javascript

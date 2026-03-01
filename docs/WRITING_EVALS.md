@@ -239,3 +239,163 @@ Aim for a balance across these dimensions:
 | **Individual commands / Agent** | Single command / Multi-command agent workflow |
 
 A good starting ratio: 60% positive, 40% negative.
+
+## Worked Example: Building an Eval from Scratch
+
+This walks through creating a complete eval for a hypothetical `/security:dependency-audit` command that scans `package.json` for known vulnerable dependencies.
+
+### Step 1: Design the Fixture
+
+Create a fixture with 5 planted issues of varying severity:
+
+```text
+evals/security/fixtures/vulnerable-deps/
+├── package.json          # Contains 5 vulnerable dependencies
+├── package-lock.json     # Lock file with exact versions
+└── src/
+    └── index.js          # Simple app that uses the deps
+```
+
+**package.json** plants:
+1. **Critical**: `lodash@4.17.11` — prototype pollution (CVE-2019-10744)
+2. **Critical**: `express@4.16.0` — multiple known CVEs
+3. **High**: `jsonwebtoken@8.3.0` — algorithm confusion vulnerability
+4. **Medium**: `axios@0.19.0` — SSRF vulnerability
+5. **Low**: `moment@2.24.0` — deprecated, ReDoS vulnerability
+
+Document expected findings in a reference solution.
+
+### Step 2: Create the Test Case YAML
+
+```yaml
+# evals/security/suites/dependency-audit.yaml
+- description: "vulnerable-deps — detect 5 planted dependency vulnerabilities"
+  vars:
+    prompt: |
+      Run /security:dependency-audit on the project at {{fixtureRoot}}/vulnerable-deps.
+      Report all known vulnerable dependencies with CVE IDs and severity ratings.
+    expectedFindings:
+      - pattern: "lodash.*4\\.17\\.11|CVE-2019-10744|prototype.*pollution"
+        severity: critical
+      - pattern: "express.*4\\.16|CVE-\\d{4}-\\d+"
+        severity: critical
+      - pattern: "jsonwebtoken.*8\\.3|algorithm.*confus"
+        severity: high
+      - pattern: "axios.*0\\.19|SSRF"
+        severity: medium
+      - pattern: "moment.*deprecated|ReDoS"
+        severity: low
+  metadata:
+    suite: dependency-audit
+    evalType: capability
+  assert:
+    # Layer 1: Structural
+    - type: javascript
+      value: file://graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
+
+    # Layer 1: Evidence — at least 50% of findings cite specifics
+    - type: javascript
+      value: file://graders/deterministic/evidence-cited.js
+      metric: evidence_cited
+      weight: 2
+
+    # Layer 1: Severity accuracy — severity matches expected
+    - type: javascript
+      value: file://graders/deterministic/severity-accuracy.js
+      metric: severity_accuracy
+      weight: 2
+
+    # Layer 2: Finding quality (LLM rubric)
+    - type: llm-rubric
+      value: file://graders/llm-rubrics/finding-quality.md
+      metric: finding_quality
+      weight: 2
+
+    # Layer 2: Coaching quality
+    - type: llm-rubric
+      value: file://graders/llm-rubrics/coaching-quality.md
+      metric: coaching_quality
+      weight: 1
+```
+
+### Step 3: Write a Custom Deterministic Grader
+
+For this eval, we want to check that the agent reports actual CVE IDs, not fabricated ones:
+
+```javascript
+// evals/security/graders/deterministic/cve-validator.js
+module.exports = async function({ output }) {
+  // Extract CVE references
+  const cvePattern = /CVE-\d{4}-\d{4,}/g;
+  const cves = [...new Set(output.match(cvePattern) || [])];
+
+  if (cves.length === 0) {
+    return { pass: false, score: 0, reason: 'No CVE IDs cited in output' };
+  }
+
+  // Known valid CVEs for our fixture
+  const knownCVEs = [
+    'CVE-2019-10744',  // lodash prototype pollution
+    'CVE-2024-29041',  // express
+    'CVE-2022-23529',  // jsonwebtoken
+    'CVE-2020-28168',  // axios SSRF
+    'CVE-2022-31129',  // moment ReDoS
+  ];
+
+  const valid = cves.filter(c => knownCVEs.includes(c));
+  const invalid = cves.filter(c => !knownCVEs.includes(c));
+  const ratio = valid.length / cves.length;
+
+  return {
+    pass: ratio >= 0.8 && invalid.length <= 1,
+    score: ratio,
+    reason: `${valid.length}/${cves.length} CVE IDs are valid. ${invalid.length > 0 ? `Unrecognized: ${invalid.join(', ')}` : ''}`,
+  };
+};
+```
+
+### Step 4: Run the Eval and Interpret pass@k
+
+```bash
+# Run 5 trials
+for i in {1..5}; do npx promptfoo eval -c evals/security/promptfooconfig.yaml; done
+
+# Compute metrics
+python eval-infra/scripts/compute-pass-at-k.py \
+  --results evals/security/.promptfoo/output.json \
+  --k 1 3 5 \
+  --group-by evalType
+
+# Example output:
+# === capability evals ===
+# pass@1: 0.60  (3/5 trials passed)
+# pass@3: 0.90  (high chance at least 1 of 3 passes)
+# pass^3: 0.22  (low reliability — needs improvement)
+```
+
+**Interpreting the results:**
+- **pass@1 = 0.60**: The agent finds the vulnerabilities 60% of the time — decent start for a capability eval
+- **pass@3 = 0.90**: Running 3 trials gives 90% chance of at least one good result
+- **pass^3 = 0.22**: Only 22% chance all 3 trials pass — the agent is inconsistent
+
+### Step 5: Read a Transcript and Iterate
+
+```bash
+# View failed transcripts
+./eval-infra/scripts/transcript-viewer.sh \
+  --results evals/security/.promptfoo/output.json \
+  --test "vulnerable-deps"
+```
+
+**Common failure patterns and fixes:**
+
+| Transcript Pattern | Root Cause | Fix |
+|---|---|---|
+| Agent never reads package-lock.json | Prompt doesn't mention lock file | Add "Examine both package.json and package-lock.json" to prompt |
+| Agent reports CVEs for wrong versions | Hallucination — didn't verify versions | Add hallucination-check.js grader |
+| Agent misses low-severity issues | Focuses on critical only | Add false-negative.md rubric, weight medium/low findings |
+| Agent fabricates CVE IDs | No grounding | Add cve-validator.js from Step 3 |
+
+After each iteration, re-run and compare pass@k to your previous baseline.

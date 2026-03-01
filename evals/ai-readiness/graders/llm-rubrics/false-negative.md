@@ -49,3 +49,16 @@ score: <1-5>
 pass: <true|false>
 reasoning: <1-2 sentence assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+Reports only 1 of 5 planted security issues; misses SQL injection and hardcoded secrets entirely. The audit is largely ineffective at detecting known problems.
+
+### Score 3/5
+Catches 3 of 5 planted issues; misses subtle ones like weak hashing algorithm choice. Moderate detection rate with notable gaps on less obvious issues.
+
+### Score 5/5
+Catches all 5 planted issues with correct severity ratings and specific file:line references. Comprehensive detection with no significant misses.

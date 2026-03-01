@@ -94,3 +94,22 @@ weighted_total: <computed>/5
 pass: <true|false>
 reasoning: <1-2 sentence overall assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+> "You should fix the security issues and write more tests"
+
+Generic advice, no specifics, no prioritization, not tailored to the codebase.
+
+### Score 3/5
+> "Replace MD5 with bcrypt for password hashing in auth.js. Add input validation to API endpoints."
+
+Correct and actionable, but missing priority levels, feasibility context, and effort estimates.
+
+### Score 5/5
+> "IMMEDIATE (P0): Replace MD5 with bcrypt in src/auth.js:23 — `npm install bcrypt`, then `const hash = await bcrypt.hash(password, 12)`. This blocks production readiness. NEXT SPRINT (P1): Add parameterized queries in src/db.js:15-20 to prevent SQL injection."
+
+Prioritized with timeline, specific file:line references, code snippets, and clear impact rationale.

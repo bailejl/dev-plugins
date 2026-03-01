@@ -77,3 +77,16 @@ weighted_total: <computed>/5
 pass: <true|false>
 reasoning: <1-2 sentence overall assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+Props are `any` typed, 15+ required props, no defaults, mixing concerns (data fetching + rendering). API is confusing and undocumented.
+
+### Score 3/5
+Typed props but overly specific (e.g., `onClickSubmitButton` instead of `onSubmit`), some unnecessary required props. Reasonable but could be cleaner.
+
+### Score 5/5
+Minimal prop interface extending React.HTMLAttributes, good defaults, compound component pattern where appropriate, clear generics for reusable components. Nothing to add, nothing to remove.

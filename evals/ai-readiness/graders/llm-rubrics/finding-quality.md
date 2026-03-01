@@ -77,3 +77,22 @@ weighted_total: <computed>/5
 pass: <true|false>
 reasoning: <1-2 sentence overall assessment>
 ```
+
+---
+
+## Calibration Examples
+
+### Score 1/5
+> "The code has some issues"
+
+Vague, no evidence, no file references, no severity, no recommendation.
+
+### Score 3/5
+> "Found security issue in auth module — password handling could be improved. See src/auth.js"
+
+Moderate specificity, some evidence with file reference, but generic recommendation and no line number or code snippet.
+
+### Score 5/5
+> "CRITICAL: Hardcoded JWT secret in src/auth.js:15 — `const SECRET = 'mysecret123'`. This allows any attacker to forge tokens. Remediation: Use environment variable `JWT_SECRET` with minimum 256-bit entropy."
+
+Specific file:line reference, code snippet, clear impact assessment, concrete and implementable fix.

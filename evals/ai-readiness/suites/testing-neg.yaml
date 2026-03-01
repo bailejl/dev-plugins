@@ -6,6 +6,7 @@
   metadata:
     suite: testing-neg
     case: clean-repo-negative
+    evalType: regression
   vars:
     fixture: "{{fixtureRoot}}/clean-repo"
     prompt: |
@@ -587,6 +588,28 @@
         return { pass: score >= 70, score: score / 100, reason: `Testing score: ${score}/100` };
       metric: clean_testing_score
       weight: 3
+
+    # No false critical findings
+    - type: not-icontains
+      value: "critical"
+      metric: no_false_critical
+      weight: 2
+
+    # JS: no false "missing test" or "tautological" findings
+    - type: javascript
+      value: |
+        const findings = (output.match(/🔴|critical|Critical|missing.*test|tautolog|no.*test/gi) || []).length;
+        return { pass: findings === 0, score: findings === 0 ? 1 : 0, reason: `Found ${findings} false critical/missing-test findings` };
+      metric: false_critical_count
+      weight: 2
+
+    # JS: finding count bound for clean code
+    - type: javascript
+      value: |
+        const findingBlocks = output.split(/#{2,3}\s/).filter(s => s.match(/finding|issue|problem/i)).length;
+        return { pass: findingBlocks <= 3, score: findingBlocks <= 3 ? 1 : 0.3, reason: `Found ${findingBlocks} finding blocks (max 3 for clean code)` };
+      metric: finding_count_bound
+      weight: 1
 
     # LLM rubric: false positive rate
     - type: llm-rubric

@@ -6,8 +6,18 @@
   metadata:
     suite: api-review
     case: bad-api-repo-positive
+    evalType: capability
   vars:
     fixture: "{{fixtureRoot}}/bad-api-repo"
+    expectedFindings:
+      - pattern: "verb.*URL|getUsers|deleteUser"
+        severity: high
+      - pattern: "status.*code|wrong.*status|200.*error"
+        severity: high
+      - pattern: "inconsistent.*error|error.*format"
+        severity: medium
+      - pattern: "pagination|missing.*pagination"
+        severity: medium
     prompt: |
       Run /ai-readiness:api-review on the following repository files.
       Review API design: RESTful conventions, status codes, error handling,
@@ -205,6 +215,12 @@
         endpoint designs.
       metric: coaching_quality
       weight: 2
+
+    # Deterministic: report structure
+    - type: javascript
+      value: file://./graders/deterministic/report-structure.js
+      metric: report_structure
+      weight: 1
 
     # Transcript: evidence gathering
     - type: javascript
