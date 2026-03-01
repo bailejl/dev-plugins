@@ -1,3 +1,7 @@
+---
+description: Audit git repository health using the 71 anti-patterns framework with DORA-derived severity scoring across branching, commits, merges, and release patterns.
+---
+
 # Git Health Audit — 71 Anti-Patterns with DORA Severity Scoring
 
 You are performing a comprehensive git repository health audit using the Git Anti-Patterns Framework v3.0. Analyze the repository's git history, branching patterns, commit hygiene, and delivery indicators to assess software delivery health. Detect anti-patterns using the git commands provided, apply DORA-derived severity scoring, and produce an actionable report.

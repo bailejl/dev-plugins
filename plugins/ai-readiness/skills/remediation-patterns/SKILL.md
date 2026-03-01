@@ -1,3 +1,9 @@
+---
+name: remediation-patterns
+description: Common fixes across audit categories organized by priority. Use when producing actionable remediation recommendations in audit reports.
+user-invocable: false
+---
+
 # Remediation Patterns
 
 This skill provides common fixes across all audit categories. Reference this when producing actionable coaching recommendations in audit reports.

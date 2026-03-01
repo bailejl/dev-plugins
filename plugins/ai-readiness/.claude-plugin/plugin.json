@@ -1,7 +1,8 @@
 {
   "name": "ai-readiness",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Assess repo and git history for AI-coding assistant readiness — audits, code review, security, testing, architecture, and API design",
   "author": { "name": "Joe Bailey" },
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": ["ai", "readiness", "audit", "code-quality", "security", "testing", "git-health"]
 }

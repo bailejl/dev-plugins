@@ -1,3 +1,7 @@
+---
+description: Security-focused code review across 6 categories with OWASP Top 10 mapping — injection, auth, secrets, input validation, config, and cryptography.
+---
+
 # Security & Vulnerability Pattern Review
 
 You are performing a security-focused review of this codebase. Analyze the code for vulnerability patterns, insecure practices, and security misconfigurations. Produce a scored report with OWASP Top 10 mapping and CWE references.

@@ -1,3 +1,9 @@
+---
+name: css-architecture
+description: CSS methodologies, naming conventions, responsive design, layout patterns, and design tokens reference. Use when auditing styles or advising on CSS architecture.
+user-invocable: false
+---
+
 # CSS Architecture Knowledge Base
 
 Reference guide for CSS methodologies, tooling, responsive design, and layout patterns. Use this knowledge when auditing styles, scaffolding components, or advising on CSS architecture decisions.

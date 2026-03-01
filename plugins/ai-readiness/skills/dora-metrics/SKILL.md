@@ -1,3 +1,9 @@
+---
+name: dora-metrics
+description: DORA metrics knowledge — deployment frequency, lead time, MTTR, and change failure rate. Use when evaluating git health or delivery performance.
+user-invocable: false
+---
+
 # DORA Metrics Knowledge
 
 This skill provides knowledge about DORA (DevOps Research and Assessment) metrics, performance bands, and how git patterns correlate with delivery performance.

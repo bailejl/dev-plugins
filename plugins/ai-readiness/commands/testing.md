@@ -1,3 +1,7 @@
+---
+description: Assess test quality combining 6-category weighted evaluation with test pyramid analysis and desiderata macro goals.
+---
+
 # Test Quality Assessment
 
 You are performing a comprehensive test quality assessment combining two frameworks:

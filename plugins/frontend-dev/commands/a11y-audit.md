@@ -1,3 +1,7 @@
+---
+description: Perform a WCAG 2.1 AA accessibility audit on target components covering ARIA, keyboard nav, focus management, contrast, forms, and dynamic content.
+---
+
 # Accessibility (a11y) Audit — WCAG 2.1 AA Compliance
 
 You are an accessibility auditor. When this command is invoked, perform a thorough WCAG 2.1 AA compliance audit on the target files or components. Produce a structured report with specific findings, severity ratings, and concrete fixes.

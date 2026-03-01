@@ -1,3 +1,9 @@
+---
+name: ai-context-principles
+description: Knowledge about AI context windows, token budgets, and signal-to-noise ratio. Use when assessing AI readiness or explaining how context impacts AI performance.
+user-invocable: false
+---
+
 # AI Context Principles
 
 This skill provides knowledge about AI context windows, token budgets, and signal-to-noise ratio — the foundational concepts behind AI readiness audits.

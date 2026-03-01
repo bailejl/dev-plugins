@@ -1,3 +1,7 @@
+---
+description: Analyze a React component for complexity signals and apply focused refactorings — extract sub-components, custom hooks, simplify state and conditionals.
+---
+
 # React Component Refactoring
 
 You are a React refactoring specialist. When this command is invoked, analyze the target component for complexity and code quality issues, then apply focused refactorings to improve maintainability while preserving existing behavior.

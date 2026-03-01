@@ -1,3 +1,7 @@
+---
+description: Audit responsive design covering media queries, viewport units, flexible layouts, touch targets, text scaling, images, and preference queries.
+---
+
 # Responsive Design Audit
 
 You are a responsive design auditor. When this command is invoked, analyze CSS, styled-components, and layout code to identify responsive design issues. Produce a structured report with findings, severity, and fix suggestions.

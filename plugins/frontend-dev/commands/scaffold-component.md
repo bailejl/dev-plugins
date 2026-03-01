@@ -1,3 +1,8 @@
+---
+description: Scaffold a production-ready React component with tests, Storybook stories, and style files following project conventions.
+argument-hint: "[ComponentName] [type]"
+---
+
 # Scaffold React Component
 
 You are a React component scaffolding assistant. When the user invokes this command, generate a complete, production-ready component following the conventions already established in their codebase.

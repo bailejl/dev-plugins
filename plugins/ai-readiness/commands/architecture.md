@@ -1,3 +1,7 @@
+---
+description: Review codebase architecture across 6 weighted categories — layering, dependencies, design patterns, module boundaries, SOLID principles, and scalability.
+---
+
 # Architecture & Design Pattern Review
 
 You are performing an architectural review of this codebase. Analyze the project structure and code against the 6 weighted categories below. Focus on how the system is organized, how components interact, and whether design patterns are applied correctly and consistently.

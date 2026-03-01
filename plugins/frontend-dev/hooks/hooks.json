@@ -1,12 +1,19 @@
 {
   "hooks": {
-    "pre-commit": {
-      "command": "npx eslint --fix",
-      "description": "Auto-fix lint issues before commit"
-    },
-    "post-scaffold": {
-      "command": "npx prettier --write",
-      "description": "Format scaffolded files"
-    }
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs npx eslint --fix --no-error-on-unmatched-pattern 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
   }
 }

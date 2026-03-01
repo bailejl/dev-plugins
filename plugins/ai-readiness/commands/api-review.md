@@ -1,3 +1,7 @@
+---
+description: Review API design across 7 weighted categories — REST conventions, HTTP status codes, schemas, contracts, versioning, pagination, and idempotency.
+---
+
 # API Design & Contract Pattern Review
 
 You are performing an API design review. Analyze the API code (controllers, routes, handlers, schemas, and documentation) against the 7 weighted categories below. Evaluate consistency, correctness, and adherence to API design best practices.

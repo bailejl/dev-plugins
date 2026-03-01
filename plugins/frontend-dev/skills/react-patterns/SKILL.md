@@ -1,3 +1,9 @@
+---
+name: react-patterns
+description: React hooks, composition patterns, state management, and performance optimization reference. Use when reviewing, scaffolding, or refactoring React components.
+user-invocable: false
+---
+
 # React Patterns Knowledge Base
 
 Reference guide for React patterns, hooks, composition strategies, state management, and performance optimization. Use this knowledge when reviewing, scaffolding, or refactoring React components.

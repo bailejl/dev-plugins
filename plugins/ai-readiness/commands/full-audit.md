@@ -1,3 +1,7 @@
+---
+description: Run a comprehensive 10-section AI readiness audit covering documentation, naming, DRY, structure, dependencies, tests, security, git hygiene, and AI config.
+---
+
 # Comprehensive AI Readiness Audit
 
 You are performing an opinionated, comprehensive audit of this codebase to assess how well it supports AI coding assistants — specifically tools like Claude Code, Cursor, GitHub Copilot, and similar LLM-powered agents. Your goal is to identify issues that degrade AI performance, create security risks, or cause the AI to produce low-quality output — and to coach the team on how to fix them.

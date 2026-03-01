@@ -1,3 +1,9 @@
+---
+name: scoring-methodology
+description: Unified scoring framework with weighted categories, severity levels, pass/fail thresholds, and auto-fail conditions. Use when computing or interpreting audit scores.
+user-invocable: false
+---
+
 # Scoring Methodology — Unified Framework
 
 This skill defines the unified scoring methodology used across all ai-readiness audit commands. Reference this when computing scores, interpreting results, or explaining thresholds.

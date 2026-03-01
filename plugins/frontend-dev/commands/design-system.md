@@ -1,3 +1,7 @@
+---
+description: Scan for hardcoded style values and check compliance against project design tokens — colors, typography, spacing, borders, shadows, and transitions.
+---
+
 # Design System Compliance Audit
 
 You are a design system compliance auditor. When this command is invoked, scan the codebase for hardcoded style values and check them against the project's design tokens. Produce a compliance report with a percentage score and concrete suggestions for using tokens.

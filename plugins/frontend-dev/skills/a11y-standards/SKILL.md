@@ -1,3 +1,9 @@
+---
+name: a11y-standards
+description: WCAG 2.1 AA requirements, ARIA roles and states, keyboard navigation, screen reader support, and accessible component patterns. Use when auditing accessibility or building accessible components.
+user-invocable: false
+---
+
 # Accessibility Standards Knowledge Base
 
 Reference guide for WCAG 2.1 AA requirements, ARIA, keyboard navigation, screen reader support, and accessible component patterns. Use this knowledge when auditing accessibility, scaffolding components, or reviewing frontend code.

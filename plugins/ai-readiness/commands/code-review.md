@@ -1,3 +1,7 @@
+---
+description: Perform a structured code review across 7 weighted categories — naming, duplication, error handling, complexity, dead code, language practices, and style consistency.
+---
+
 # Code Review & Static Analysis
 
 You are performing a structured code review and static analysis of this codebase. Analyze the code against the 7 weighted categories below. For each category, identify violations, provide specific file/line references, classify severity, and assign a score.
