@@ -10,9 +10,13 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 EVALS_DIR="$REPO_ROOT/evals"
 
 # ---------------------------------------------------------------------------
-# Known plugins — add new ones here
+# Known plugins — auto-discovered from ./plugins directory
 # ---------------------------------------------------------------------------
-KNOWN_PLUGINS=("frontend-dev" "ai-readiness")
+PLUGINS_DIR="$REPO_ROOT/plugins"
+KNOWN_PLUGINS=()
+for dir in "$PLUGINS_DIR"/*/; do
+  [[ -d "$dir" ]] && KNOWN_PLUGINS+=("$(basename "$dir")")
+done
 
 # ---------------------------------------------------------------------------
 # Help
